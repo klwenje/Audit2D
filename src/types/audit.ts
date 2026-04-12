@@ -42,6 +42,14 @@ export type DraftFinding = {
   recommendation: string;
 };
 
+export type InterviewPrompt = {
+  id: string;
+  stakeholderId: string;
+  question: string;
+  answer: string;
+  revealsEvidenceIds?: string[];
+};
+
 export type InboxMessage = {
   id: string;
   from: string;
@@ -61,4 +69,5 @@ export type AuditCase = {
   evidence: EvidenceItem[];
   issues: Issue[];
   inbox: InboxMessage[];
+  interviewPrompts: InterviewPrompt[];
 };

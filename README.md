@@ -37,6 +37,7 @@ The first playable shell is in place:
 - top-down office prototype with movement and desk interaction
 - workstation prototype with case file, inbox, and evidence review
 - findings drafting and scored report results
+- stakeholder interviews that reveal and reinforce evidence trails
 
 ## Run Locally
 

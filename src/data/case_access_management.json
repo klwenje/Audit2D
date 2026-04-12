@@ -168,5 +168,54 @@
       "preview": "I've exported the latest user and admin lists. Let me know if you need anything else.",
       "body": "Attached are the current user export and administrator inventory. We believe offboarding is generally handled same-day, though some handoffs depend on HR timing. Happy to walk through the process if needed."
     }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "Walk me through how user offboarding should happen.",
+      "answer": "HR sends us the termination list and the service desk disables accounts. In practice, if HR closes late in the day, disablement sometimes carries over to the next morning."
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-1",
+      "question": "Why is admin_global still in use?",
+      "answer": "That account is a legacy break-glass credential. Several old scripts still reference it, and ownership was never formally reassigned after the last infrastructure lead left.",
+      "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-2",
+      "question": "When did John Doe leave the company?",
+      "answer": "John Doe's termination was effective March 1, and HR submitted the offboarding record the same afternoon.",
+      "revealsEvidenceIds": ["ev-1"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-2",
+      "question": "Does HR verify that accounts were disabled?",
+      "answer": "No, HR assumes IT completes the request once the ticket is raised. We don't currently receive a completion confirmation."
+    },
+    {
+      "id": "ip-5",
+      "stakeholderId": "st-3",
+      "question": "Are all privileged accounts covered by MFA?",
+      "answer": "Almost all are. The finance service admin account remains exempt because of an older integration concern that security accepted as temporary technical debt.",
+      "revealsEvidenceIds": ["ev-5"]
+    },
+    {
+      "id": "ip-6",
+      "stakeholderId": "st-3",
+      "question": "When was the access policy last reviewed?",
+      "answer": "The policy should be reviewed annually, but we fell behind during the ERP rollout and haven't completed the last cycle yet.",
+      "revealsEvidenceIds": ["ev-6"]
+    },
+    {
+      "id": "ip-7",
+      "stakeholderId": "st-4",
+      "question": "Who signs off Falcon finance access each quarter?",
+      "answer": "I should be reviewing Falcon access personally. For Q1, I reviewed the user list informally during budget close but did not sign the certification sheet.",
+      "revealsEvidenceIds": ["ev-4"]
+    }
   ]
 }

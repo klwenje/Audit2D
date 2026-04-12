@@ -14,4 +14,6 @@ Loaded the first audit case from local JSON and turned the workstation into a re
 Added inbox, case file, evidence browsing, and reviewed-evidence tracking.
 Added the findings notebook, evidence linking, and report submission.
 Implemented deterministic scoring with a ranked results screen.
-Next: add stakeholder interview flow and use it to unlock or reinforce evidence trails.
+Added stakeholder interview prompts and an interview log.
+Used interview responses to unlock more evidence and reinforce fieldwork discovery.
+Next: improve the report-writing feel with better final output and more audit narrative.

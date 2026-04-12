@@ -15,7 +15,9 @@ type AuditState = {
   auditCase: AuditCase;
   selectedEvidenceId: string;
   reviewedEvidenceIds: string[];
-  workstationTab: "inbox" | "caseFile" | "evidence" | "findings";
+  discoveredEvidenceIds: string[];
+  interviewLogIds: string[];
+  workstationTab: "inbox" | "caseFile" | "interviews" | "evidence" | "findings";
   draftedFindings: DraftFinding[];
   findingDraftForm: FindingDraftForm;
   reportSubmitted: boolean;
@@ -23,6 +25,7 @@ type AuditState = {
   setWorkstationTab: (tab: AuditState["workstationTab"]) => void;
   selectEvidence: (evidenceId: string) => void;
   markEvidenceReviewed: (evidenceId: string) => void;
+  logInterviewPrompt: (promptId: string) => void;
   updateFindingDraftForm: (next: Partial<FindingDraftForm>) => void;
   toggleLinkedEvidence: (evidenceId: string) => void;
   addDraftFinding: () => void;
@@ -42,8 +45,10 @@ const defaultFindingDraftForm: FindingDraftForm = {
 
 export const useAuditStore = create<AuditState>((set) => ({
   auditCase: starterCase,
-  selectedEvidenceId: starterCase.evidence[0]?.id ?? "",
+  selectedEvidenceId: "ev-2",
   reviewedEvidenceIds: [],
+  discoveredEvidenceIds: ["ev-2"],
+  interviewLogIds: [],
   workstationTab: "inbox",
   draftedFindings: [],
   findingDraftForm: defaultFindingDraftForm,
@@ -57,6 +62,20 @@ export const useAuditStore = create<AuditState>((set) => ({
         ? state.reviewedEvidenceIds
         : [...state.reviewedEvidenceIds, evidenceId],
     })),
+  logInterviewPrompt: (promptId) =>
+    set((state) => {
+      const prompt = state.auditCase.interviewPrompts.find((entry) => entry.id === promptId);
+      const revealedEvidenceIds = prompt?.revealsEvidenceIds ?? [];
+
+      return {
+        interviewLogIds: state.interviewLogIds.includes(promptId)
+          ? state.interviewLogIds
+          : [...state.interviewLogIds, promptId],
+        discoveredEvidenceIds: [
+          ...new Set([...state.discoveredEvidenceIds, ...revealedEvidenceIds]),
+        ],
+      };
+    }),
   updateFindingDraftForm: (next) =>
     set((state) => ({
       findingDraftForm: {
@@ -108,8 +127,10 @@ export const useAuditStore = create<AuditState>((set) => ({
     })),
   resetAuditProgress: () =>
     set({
-      selectedEvidenceId: starterCase.evidence[0]?.id ?? "",
+      selectedEvidenceId: "ev-2",
       reviewedEvidenceIds: [],
+      discoveredEvidenceIds: ["ev-2"],
+      interviewLogIds: [],
       workstationTab: "inbox",
       draftedFindings: [],
       findingDraftForm: defaultFindingDraftForm,

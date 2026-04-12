@@ -7,10 +7,13 @@ export function WorkstationScene() {
   const auditCase = useAuditStore((state) => state.auditCase);
   const selectedEvidenceId = useAuditStore((state) => state.selectedEvidenceId);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
+  const discoveredEvidenceIds = useAuditStore((state) => state.discoveredEvidenceIds);
+  const interviewLogIds = useAuditStore((state) => state.interviewLogIds);
   const workstationTab = useAuditStore((state) => state.workstationTab);
   const setWorkstationTab = useAuditStore((state) => state.setWorkstationTab);
   const selectEvidence = useAuditStore((state) => state.selectEvidence);
   const markEvidenceReviewed = useAuditStore((state) => state.markEvidenceReviewed);
+  const logInterviewPrompt = useAuditStore((state) => state.logInterviewPrompt);
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
   const findingDraftForm = useAuditStore((state) => state.findingDraftForm);
   const updateFindingDraftForm = useAuditStore((state) => state.updateFindingDraftForm);
@@ -25,9 +28,19 @@ export function WorkstationScene() {
     [auditCase.evidence, selectedEvidenceId],
   );
 
+  const visibleEvidence = auditCase.evidence.filter((item) =>
+    discoveredEvidenceIds.includes(item.id),
+  );
+
+  const groupedPrompts = auditCase.stakeholders.map((stakeholder) => ({
+    stakeholder,
+    prompts: auditCase.interviewPrompts.filter((prompt) => prompt.stakeholderId === stakeholder.id),
+  }));
+
   const tabs = [
     { key: "inbox", label: "Inbox" },
     { key: "caseFile", label: "Case File" },
+    { key: "interviews", label: "Interviews" },
     { key: "evidence", label: "Evidence" },
     { key: "findings", label: "Findings" },
   ] as const;
@@ -42,7 +55,7 @@ export function WorkstationScene() {
           </div>
           <div className="workstation-meta">
             <span>Deadline: {auditCase.deadlineDays} days</span>
-            <span>Reviewed: {reviewedEvidenceIds.length}/{auditCase.evidence.length}</span>
+            <span>Reviewed: {reviewedEvidenceIds.length}/{visibleEvidence.length}</span>
           </div>
         </div>
 
@@ -107,12 +120,59 @@ export function WorkstationScene() {
           </div>
         )}
 
+        {workstationTab === "interviews" && (
+          <div className="terminal-panel-stack">
+            {groupedPrompts.map(({ stakeholder, prompts }) => (
+              <section key={stakeholder.id} className="terminal-panel">
+                <h2>{stakeholder.name}</h2>
+                <p className="terminal-muted">
+                  {stakeholder.role} - {stakeholder.department}
+                </p>
+
+                <div className="interview-prompt-list">
+                  {prompts.map((prompt) => {
+                    const asked = interviewLogIds.includes(prompt.id);
+
+                    return (
+                      <article key={prompt.id} className="interview-card">
+                        <div className="interview-question-row">
+                          <strong>{prompt.question}</strong>
+                          <button
+                            className="review-button"
+                            onClick={() => logInterviewPrompt(prompt.id)}
+                          >
+                            {asked ? "Asked" : "Ask"}
+                          </button>
+                        </div>
+
+                        {asked && (
+                          <div className="interview-answer">
+                            <p>{prompt.answer}</p>
+                            {prompt.revealsEvidenceIds && prompt.revealsEvidenceIds.length > 0 && (
+                              <p className="terminal-muted">
+                                Evidence unlocked:{" "}
+                                {prompt.revealsEvidenceIds
+                                  .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
+                                  .join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+
         {workstationTab === "evidence" && selectedEvidence && (
           <div className="workstation-layout">
             <aside className="terminal-panel evidence-sidebar">
               <h2>Evidence Locker</h2>
               <div className="evidence-list">
-                {auditCase.evidence.map((item) => {
+                {visibleEvidence.map((item) => {
                   const reviewed = reviewedEvidenceIds.includes(item.id);
 
                   return (
@@ -226,13 +286,20 @@ export function WorkstationScene() {
                 <span>Link Evidence</span>
                 <div className="evidence-checkbox-grid">
                   {auditCase.evidence.map((item) => (
-                    <label key={item.id} className="evidence-checkbox">
+                    <label
+                      key={item.id}
+                      className={`evidence-checkbox ${discoveredEvidenceIds.includes(item.id) ? "" : "locked"}`}
+                    >
                       <input
                         type="checkbox"
                         checked={findingDraftForm.linkedEvidenceIds.includes(item.id)}
                         onChange={() => toggleLinkedEvidence(item.id)}
+                        disabled={!discoveredEvidenceIds.includes(item.id)}
                       />
-                      <span>{item.title}</span>
+                      <span>
+                        {item.title}
+                        {!discoveredEvidenceIds.includes(item.id) ? " (Interview to unlock)" : ""}
+                      </span>
                     </label>
                   ))}
                 </div>
