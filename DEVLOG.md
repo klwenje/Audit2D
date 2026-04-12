@@ -12,4 +12,6 @@ Replaced the office placeholder with a top-down room, keyboard movement, and des
 Added a workstation placeholder so the core room-to-computer loop is now visible.
 Loaded the first audit case from local JSON and turned the workstation into a real terminal-style audit UI.
 Added inbox, case file, evidence browsing, and reviewed-evidence tracking.
-Next: add findings drafting, severity selection, and report submission.
+Added the findings notebook, evidence linking, and report submission.
+Implemented deterministic scoring with a ranked results screen.
+Next: add stakeholder interview flow and use it to unlock or reinforce evidence trails.

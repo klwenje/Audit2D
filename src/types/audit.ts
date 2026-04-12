@@ -33,6 +33,15 @@ export type Issue = {
   recommendation: string;
 };
 
+export type DraftFinding = {
+  id: string;
+  title: string;
+  description: string;
+  severity: Severity;
+  linkedEvidenceIds: string[];
+  recommendation: string;
+};
+
 export type InboxMessage = {
   id: string;
   from: string;

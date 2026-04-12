@@ -11,6 +11,13 @@ export function WorkstationScene() {
   const setWorkstationTab = useAuditStore((state) => state.setWorkstationTab);
   const selectEvidence = useAuditStore((state) => state.selectEvidence);
   const markEvidenceReviewed = useAuditStore((state) => state.markEvidenceReviewed);
+  const draftedFindings = useAuditStore((state) => state.draftedFindings);
+  const findingDraftForm = useAuditStore((state) => state.findingDraftForm);
+  const updateFindingDraftForm = useAuditStore((state) => state.updateFindingDraftForm);
+  const toggleLinkedEvidence = useAuditStore((state) => state.toggleLinkedEvidence);
+  const addDraftFinding = useAuditStore((state) => state.addDraftFinding);
+  const removeDraftFinding = useAuditStore((state) => state.removeDraftFinding);
+  const submitReport = useAuditStore((state) => state.submitReport);
 
   const selectedEvidence = useMemo(
     () =>
@@ -167,20 +174,115 @@ export function WorkstationScene() {
           <div className="workstation-layout single">
             <section className="terminal-panel">
               <h2>Findings Notebook</h2>
-              <p>
-                This notebook comes online in the next slice. For now, use the case file and evidence
-                views to understand the control story before we add draft findings, severity selection,
-                and recommendations.
-              </p>
-              <div className="workstation-grid compact">
-                <div className="workstation-panel">
-                  Reviewed Evidence
-                  <strong>{reviewedEvidenceIds.length}</strong>
+              <div className="finding-form-grid">
+                <label className="option-row">
+                  <span>Finding Title</span>
+                  <input
+                    type="text"
+                    value={findingDraftForm.title}
+                    onChange={(event) => updateFindingDraftForm({ title: event.target.value })}
+                    placeholder="Failure to Deprovision User"
+                  />
+                </label>
+
+                <label className="option-row">
+                  <span>Severity</span>
+                  <select
+                    value={findingDraftForm.severity}
+                    onChange={(event) =>
+                      updateFindingDraftForm({
+                        severity: event.target.value as "Low" | "Medium" | "High",
+                      })
+                    }
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="option-row">
+                <span>Description</span>
+                <textarea
+                  className="terminal-textarea"
+                  value={findingDraftForm.description}
+                  onChange={(event) => updateFindingDraftForm({ description: event.target.value })}
+                  placeholder="Describe the condition observed during testing."
+                />
+              </label>
+
+              <label className="option-row">
+                <span>Recommendation</span>
+                <textarea
+                  className="terminal-textarea"
+                  value={findingDraftForm.recommendation}
+                  onChange={(event) => updateFindingDraftForm({ recommendation: event.target.value })}
+                  placeholder="Describe the remediation you expect management to implement."
+                />
+              </label>
+
+              <div className="option-row">
+                <span>Link Evidence</span>
+                <div className="evidence-checkbox-grid">
+                  {auditCase.evidence.map((item) => (
+                    <label key={item.id} className="evidence-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={findingDraftForm.linkedEvidenceIds.includes(item.id)}
+                        onChange={() => toggleLinkedEvidence(item.id)}
+                      />
+                      <span>{item.title}</span>
+                    </label>
+                  ))}
                 </div>
-                <div className="workstation-panel">
-                  Controls in Scope
-                  <strong>{auditCase.controls.length}</strong>
-                </div>
+              </div>
+
+              <div className="results-actions">
+                <button className="menu-button selected" onClick={() => addDraftFinding()}>
+                  <span className="menu-indicator">+</span>
+                  <span>Add Finding</span>
+                </button>
+                <button
+                  className="menu-button"
+                  onClick={() => {
+                    submitReport();
+                    setScene("results");
+                  }}
+                  disabled={draftedFindings.length === 0}
+                >
+                  <span className="menu-indicator">&gt;</span>
+                  <span>Submit Report</span>
+                </button>
+              </div>
+            </section>
+
+            <section className="terminal-panel">
+              <h2>Drafted Findings</h2>
+              {draftedFindings.length === 0 && (
+                <p className="terminal-muted">No drafted findings yet. Add at least one before submitting.</p>
+              )}
+              <div className="terminal-panel-stack">
+                {draftedFindings.map((finding) => (
+                  <article key={finding.id} className="finding-card">
+                    <div className="mail-header">
+                      <strong>{finding.title}</strong>
+                      <span>{finding.severity}</span>
+                    </div>
+                    <p className="mail-body">{finding.description}</p>
+                    {finding.linkedEvidenceIds.length > 0 && (
+                      <p className="terminal-muted">
+                        Evidence:{" "}
+                        {finding.linkedEvidenceIds
+                          .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
+                          .join(", ")}
+                      </p>
+                    )}
+                    <button className="text-button" onClick={() => removeDraftFinding(finding.id)}>
+                      Delete
+                    </button>
+                  </article>
+                ))}
               </div>
             </section>
           </div>
