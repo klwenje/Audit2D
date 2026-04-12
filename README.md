@@ -26,6 +26,22 @@ The goal is to build practical IT audit intuition through structured cases, evid
 - One starter audit case
 - Findings and scoring
 
+## Current Status
+
+The first playable shell is in place:
+
+- browser app scaffolded with Vite, React, TypeScript, and Zustand
+- splash screen with keyboard start prompt
+- main menu with keyboard navigation
+- options screen with placeholder settings
+
+## Run Locally
+
+```bash
+npm install
+npm run dev
+```
+
 ## Tech Direction
 
 - Vite
