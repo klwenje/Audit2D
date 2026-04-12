@@ -16,4 +16,5 @@ Added the findings notebook, evidence linking, and report submission.
 Implemented deterministic scoring with a ranked results screen.
 Added stakeholder interview prompts and an interview log.
 Used interview responses to unlock more evidence and reinforce fieldwork discovery.
-Next: improve the report-writing feel with better final output and more audit narrative.
+Improved the results screen with an executive summary, engagement metrics, and stronger closeout narrative.
+Next: consider adding a printable-style final report sheet or a second audit case.

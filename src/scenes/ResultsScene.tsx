@@ -8,12 +8,41 @@ function getRank(score: number) {
   return "Trainee Auditor";
 }
 
+function getPerformanceHeadline(score: number) {
+  if (score >= 85) return "Strong control story and well-supported reporting.";
+  if (score >= 65) return "Solid audit instincts with a few missed opportunities.";
+  if (score >= 45) return "Promising fieldwork, but support and severity need tightening.";
+  return "Early-stage audit judgment. More corroboration is needed.";
+}
+
+function getPerformanceNarrative(
+  score: number,
+  matchedCount: number,
+  missedCount: number,
+  unsupportedCount: number,
+) {
+  if (score >= 85) {
+    return `You identified ${matchedCount} key issues and kept unsupported reporting under control. This reads like a disciplined audit closeout with credible support.`;
+  }
+
+  if (score >= 65) {
+    return `You captured ${matchedCount} issues, but ${missedCount} important items still slipped through. The fundamentals are there, and the next improvement is tighter follow-through.`;
+  }
+
+  if (score >= 45) {
+    return `You surfaced some real risk, but the report still feels incomplete. Missed issues and weaker support are holding the audit back from a stronger conclusion.`;
+  }
+
+  return `The engagement needs more evidence-backed judgment. Too many control gaps were missed or weakly supported to make the report persuasive.`;
+}
+
 export function ResultsScene() {
   const setScene = useGameStore((state) => state.setScene);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
   const auditCase = useAuditStore((state) => state.auditCase);
   const finalScore = useAuditStore((state) => state.finalScore);
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
+  const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
 
   if (!finalScore) {
@@ -36,6 +65,14 @@ export function ResultsScene() {
   const unsupportedFindings = draftedFindings.filter((finding) =>
     finalScore.unsupportedFindingIds.includes(finding.id),
   );
+  const rank = getRank(finalScore.score);
+  const headline = getPerformanceHeadline(finalScore.score);
+  const narrative = getPerformanceNarrative(
+    finalScore.score,
+    matchedIssues.length,
+    missedIssues.length,
+    unsupportedFindings.length,
+  );
 
   return (
     <section className="scene scene-results">
@@ -44,12 +81,65 @@ export function ResultsScene() {
           <div>
             <p className="eyebrow">Final Audit Review</p>
             <h1>RESULTS</h1>
+            <p className="scene-copy report-lead">{headline}</p>
           </div>
           <div className="score-badge">
             <strong>{finalScore.score}/100</strong>
-            <span>{getRank(finalScore.score)}</span>
+            <span>{rank}</span>
           </div>
         </div>
+
+        <section className="terminal-panel report-summary-panel">
+          <div className="report-summary-header">
+            <div>
+              <p className="eyebrow">Executive Summary</p>
+              <h2>{auditCase.title}</h2>
+            </div>
+            <div className="report-chip">{rank}</div>
+          </div>
+
+          <p className="report-summary-copy">{narrative}</p>
+
+          <div className="summary-metrics">
+            <article className="summary-metric">
+              <span className="metric-label">Issues Matched</span>
+              <strong>{matchedIssues.length}</strong>
+            </article>
+            <article className="summary-metric">
+              <span className="metric-label">Issues Missed</span>
+              <strong>{missedIssues.length}</strong>
+            </article>
+            <article className="summary-metric">
+              <span className="metric-label">Unsupported Findings</span>
+              <strong>{unsupportedFindings.length}</strong>
+            </article>
+            <article className="summary-metric">
+              <span className="metric-label">Evidence Reviewed</span>
+              <strong>{reviewedEvidenceIds.length}</strong>
+            </article>
+          </div>
+        </section>
+
+        <section className="terminal-panel report-closeout-panel">
+          <p className="eyebrow">Final Report Note</p>
+          <div className="report-closeout-grid">
+            <div>
+              <h3>Management Message</h3>
+              <p>
+                The engagement indicates that user access governance is partially designed but not operating
+                consistently. Offboarding, privileged access ownership, and periodic review controls require
+                stronger follow-through and clearer accountability.
+              </p>
+            </div>
+            <div>
+              <h3>Auditor Reflection</h3>
+              <p>
+                Stronger reports come from combining evidence, interviews, and disciplined severity judgment.
+                The final score reflects not just what you noticed, but how well you supported the case.
+              </p>
+            </div>
+          </div>
+        </section>
 
         <div className="results-grid">
           <section className="terminal-panel">

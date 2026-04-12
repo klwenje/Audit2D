@@ -102,6 +102,11 @@ h1 {
   color: #8fa8bf;
 }
 
+.report-lead {
+  max-width: 40rem;
+  margin-top: 0.55rem;
+}
+
 .press-start {
   margin: 1.5rem 0 0;
   color: #9de4b0;
@@ -471,6 +476,67 @@ h1 {
   font-size: 2rem;
 }
 
+.report-summary-panel,
+.report-closeout-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.report-summary-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.report-chip {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #8ad3ff;
+  color: #fff7bf;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+
+.report-summary-copy {
+  margin: 0;
+  color: #d6e1f0;
+  line-height: 1.65;
+}
+
+.summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.summary-metric {
+  padding: 0.8rem;
+  border: 1px solid #36536c;
+  background: rgba(10, 17, 29, 0.92);
+}
+
+.metric-label {
+  display: block;
+  color: #8fa8bf;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.summary-metric strong {
+  display: block;
+  margin-top: 0.45rem;
+  color: #fff7bf;
+  font-size: 1.35rem;
+}
+
+.report-closeout-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 .results-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -489,7 +555,10 @@ h1 {
   .workstation-topbar,
   .office-header,
   .finding-form-grid,
-  .results-grid {
+  .results-grid,
+  .summary-metrics,
+  .report-closeout-grid,
+  .report-summary-header {
     grid-template-columns: 1fr;
     display: grid;
   }
