@@ -17,4 +17,5 @@ Implemented deterministic scoring with a ranked results screen.
 Added stakeholder interview prompts and an interview log.
 Used interview responses to unlock more evidence and reinforce fieldwork discovery.
 Improved the results screen with an executive summary, engagement metrics, and stronger closeout narrative.
-Next: consider adding a printable-style final report sheet or a second audit case.
+Added a printable-style final report sheet with browser print support.
+Next: consider a second audit case or light UI/audio polish.

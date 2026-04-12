@@ -39,6 +39,7 @@ The first playable shell is in place:
 - findings drafting and scored report results
 - stakeholder interviews that reveal and reinforce evidence trails
 - polished report closeout with narrative feedback and executive summary
+- printable-style final report sheet inside the results flow
 
 ## Run Locally
 

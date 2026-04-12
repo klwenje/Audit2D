@@ -36,6 +36,10 @@ function getPerformanceNarrative(
   return `The engagement needs more evidence-backed judgment. Too many control gaps were missed or weakly supported to make the report persuasive.`;
 }
 
+function getSeverityLabel(count: number, label: string) {
+  return `${count} ${label}${count === 1 ? "" : "s"}`;
+}
+
 export function ResultsScene() {
   const setScene = useGameStore((state) => state.setScene);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
@@ -73,6 +77,9 @@ export function ResultsScene() {
     missedIssues.length,
     unsupportedFindings.length,
   );
+  const draftedHigh = draftedFindings.filter((finding) => finding.severity === "High").length;
+  const draftedMedium = draftedFindings.filter((finding) => finding.severity === "Medium").length;
+  const draftedLow = draftedFindings.filter((finding) => finding.severity === "Low").length;
 
   return (
     <section className="scene scene-results">
@@ -138,6 +145,81 @@ export function ResultsScene() {
                 The final score reflects not just what you noticed, but how well you supported the case.
               </p>
             </div>
+          </div>
+        </section>
+
+        <section className="report-sheet" aria-label="Printable audit report">
+          <div className="report-sheet-header">
+            <div>
+              <p className="report-sheet-kicker">Internal Audit Report</p>
+              <h2>{auditCase.title}</h2>
+              <p className="report-sheet-meta">
+                Audit Outcome: {rank} | Score: {finalScore.score}/100
+              </p>
+            </div>
+            <button className="print-report-button" onClick={() => window.print()}>
+              Print Report
+            </button>
+          </div>
+
+          <div className="report-sheet-section">
+            <h3>Objective</h3>
+            <p>{auditCase.objective}</p>
+          </div>
+
+          <div className="report-sheet-section">
+            <h3>Executive Summary</h3>
+            <p>{narrative}</p>
+          </div>
+
+          <div className="report-sheet-section report-sheet-grid">
+            <div>
+              <h3>Scope</h3>
+              <ul className="bullet-list report-sheet-list">
+                {auditCase.scope.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3>Report Metrics</h3>
+              <ul className="bullet-list report-sheet-list">
+                <li>{getSeverityLabel(draftedHigh, "High finding")}</li>
+                <li>{getSeverityLabel(draftedMedium, "Medium finding")}</li>
+                <li>{getSeverityLabel(draftedLow, "Low finding")}</li>
+                <li>{reviewedEvidenceIds.length} evidence items reviewed</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="report-sheet-section">
+            <h3>Drafted Findings</h3>
+            {draftedFindings.length > 0 ? (
+              <div className="report-finding-stack">
+                {draftedFindings.map((finding, index) => (
+                  <article key={finding.id} className="report-finding">
+                    <div className="report-finding-header">
+                      <strong>
+                        {index + 1}. {finding.title}
+                      </strong>
+                      <span>{finding.severity}</span>
+                    </div>
+                    <p><strong>Condition:</strong> {finding.description}</p>
+                    <p><strong>Recommendation:</strong> {finding.recommendation || "No recommendation provided."}</p>
+                    <p>
+                      <strong>Evidence:</strong>{" "}
+                      {finding.linkedEvidenceIds.length > 0
+                        ? finding.linkedEvidenceIds
+                            .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
+                            .join(", ")
+                        : "None linked."}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p>No findings were drafted for this engagement.</p>
+            )}
           </div>
         </section>
 

@@ -537,6 +537,84 @@ h1 {
   gap: 1rem;
 }
 
+.report-sheet {
+  padding: 1.35rem;
+  border: 1px solid #aeb9c8;
+  background: #f6f2e8;
+  color: #1a2230;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+.report-sheet h2,
+.report-sheet h3,
+.report-sheet strong,
+.report-sheet p,
+.report-sheet li {
+  color: #1a2230;
+}
+
+.report-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #cfd5dc;
+}
+
+.report-sheet-kicker,
+.report-sheet-meta {
+  margin: 0;
+  color: #52606f;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+
+.print-report-button {
+  padding: 0.7rem 0.95rem;
+  border: 1px solid #1a2230;
+  background: white;
+  color: #1a2230;
+}
+
+.report-sheet-section {
+  padding-top: 1rem;
+  border-top: 1px solid #d9dee4;
+}
+
+.report-sheet-section:first-of-type {
+  border-top: 0;
+}
+
+.report-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.report-sheet-list {
+  color: #1a2230;
+}
+
+.report-finding-stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.report-finding {
+  padding: 0.9rem;
+  border: 1px solid #c7ced8;
+  background: #fffdf9;
+}
+
+.report-finding-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+}
+
 .results-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -558,7 +636,9 @@ h1 {
   .results-grid,
   .summary-metrics,
   .report-closeout-grid,
-  .report-summary-header {
+  .report-summary-header,
+  .report-sheet-grid,
+  .report-sheet-header {
     grid-template-columns: 1fr;
     display: grid;
   }
@@ -566,6 +646,46 @@ h1 {
   .workstation-meta,
   .office-status {
     text-align: left;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+
+  .scene {
+    padding: 0;
+    min-height: auto;
+    background: white;
+  }
+
+  .scene-card {
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: white;
+    box-shadow: none;
+  }
+
+  .workstation-topbar,
+  .terminal-panel,
+  .results-grid,
+  .results-actions,
+  .report-closeout-panel,
+  .score-badge,
+  .report-summary-panel {
+    display: none !important;
+  }
+
+  .report-sheet {
+    box-shadow: none;
+    border: 0;
+    padding: 0;
+  }
+
+  .print-report-button {
+    display: none;
   }
 }
 
