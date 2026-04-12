@@ -34,6 +34,7 @@ The first playable shell is in place:
 - splash screen with keyboard start prompt
 - main menu with keyboard navigation
 - options screen with placeholder settings
+- top-down office prototype with movement and desk interaction
 
 ## Run Locally
 

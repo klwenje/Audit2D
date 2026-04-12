@@ -2,6 +2,7 @@ import { MainMenuScene } from "./scenes/MainMenuScene";
 import { OfficeScene } from "./scenes/OfficeScene";
 import { OptionsScene } from "./scenes/OptionsScene";
 import { SplashScene } from "./scenes/SplashScene";
+import { WorkstationScene } from "./scenes/WorkstationScene";
 import { useGameStore } from "./store/useGameStore";
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
       {currentScene === "mainMenu" && <MainMenuScene />}
       {currentScene === "options" && <OptionsScene />}
       {currentScene === "office" && <OfficeScene />}
+      {currentScene === "workstation" && <WorkstationScene />}
     </main>
   );
 }

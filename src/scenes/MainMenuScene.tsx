@@ -5,6 +5,7 @@ const menuItems = ["New Game", "Continue", "Options", "Credits"] as const;
 
 export function MainMenuScene() {
   const setScene = useGameStore((state) => state.setScene);
+  const resetOfficeState = useGameStore((state) => state.resetOfficeState);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const selectedLabel = useMemo(() => menuItems[selectedIndex], [selectedIndex]);
@@ -23,6 +24,7 @@ export function MainMenuScene() {
         if (selectedLabel === "Options") {
           setScene("options");
         } else if (selectedLabel === "New Game") {
+          resetOfficeState();
           setScene("office");
         } else if (selectedLabel === "Credits") {
           window.alert("Audit Desk Retro\nDesigned as a lightweight indie-style audit simulator.");
@@ -34,7 +36,7 @@ export function MainMenuScene() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedLabel, setScene]);
+  }, [resetOfficeState, selectedLabel, setScene]);
 
   return (
     <section className="scene scene-menu">
@@ -55,6 +57,7 @@ export function MainMenuScene() {
                       if (item === "Options") {
                         setScene("options");
                       } else if (item === "New Game") {
+                        resetOfficeState();
                         setScene("office");
                       } else if (item === "Credits") {
                         window.alert("Audit Desk Retro\nDesigned as a lightweight indie-style audit simulator.");
