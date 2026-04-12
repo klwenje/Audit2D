@@ -35,6 +35,7 @@ The first playable shell is in place:
 - main menu with keyboard navigation
 - options screen with placeholder settings
 - top-down office prototype with movement and desk interaction
+- workstation prototype with case file, inbox, and evidence review
 
 ## Run Locally
 

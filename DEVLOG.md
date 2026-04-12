@@ -10,4 +10,6 @@ Added splash, main menu, and options scenes with a retro presentation layer.
 Verified the first slice with a successful production build.
 Replaced the office placeholder with a top-down room, keyboard movement, and desk interaction.
 Added a workstation placeholder so the core room-to-computer loop is now visible.
-Next: turn the workstation into the actual audit computer UI with inbox, case file, evidence, and findings tabs.
+Loaded the first audit case from local JSON and turned the workstation into a real terminal-style audit UI.
+Added inbox, case file, evidence browsing, and reviewed-evidence tracking.
+Next: add findings drafting, severity selection, and report submission.

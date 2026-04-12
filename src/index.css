@@ -212,6 +212,10 @@ h1 {
   margin: 1.4rem 0;
 }
 
+.workstation-grid.compact {
+  margin-bottom: 0;
+}
+
 .workstation-panel {
   min-height: 5.5rem;
   padding: 0.95rem;
@@ -221,6 +225,184 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.85rem;
+}
+
+.workstation-wide {
+  display: grid;
+  gap: 1rem;
+}
+
+.workstation-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.workstation-meta {
+  display: grid;
+  gap: 0.35rem;
+  color: #9ab2c8;
+  font-size: 0.82rem;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.workstation-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.workstation-tab {
+  padding: 0.55rem 0.85rem;
+  border: 2px solid #36536c;
+  background: rgba(10, 17, 29, 0.92);
+  color: #b5cde4;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.workstation-tab.active,
+.workstation-tab:hover {
+  border-color: #8ad3ff;
+  color: #fff7bf;
+}
+
+.terminal-panel-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.mail-card,
+.terminal-panel {
+  border: 2px solid #36536c;
+  background: rgba(9, 15, 22, 0.94);
+  padding: 1rem;
+}
+
+.mail-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #f5f2dc;
+}
+
+.mail-preview,
+.terminal-muted {
+  color: #8fa8bf;
+}
+
+.mail-body,
+.terminal-panel p {
+  color: #d6e1f0;
+  line-height: 1.55;
+}
+
+.workstation-layout {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.workstation-layout.single {
+  grid-template-columns: 1fr;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.evidence-list-item {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border: 2px solid #2f455a;
+  background: rgba(12, 21, 31, 0.95);
+  color: #d6e1f0;
+  text-align: left;
+}
+
+.evidence-list-item.active,
+.evidence-list-item:hover {
+  border-color: #8ad3ff;
+  transform: translateX(2px);
+}
+
+.evidence-status {
+  color: #8fa8bf;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.evidence-status.reviewed {
+  color: #9de4b0;
+}
+
+.evidence-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.review-button {
+  padding: 0.65rem 0.85rem;
+  border: 2px solid #9de4b0;
+  background: rgba(8, 27, 19, 0.9);
+  color: #eaf8eb;
+}
+
+.evidence-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.bullet-list {
+  margin: 0.7rem 0 0;
+  padding-left: 1.15rem;
+  color: #d6e1f0;
+  line-height: 1.6;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.7rem;
+}
+
+.tag-chip {
+  padding: 0.3rem 0.55rem;
+  border: 1px solid #4d6f8d;
+  color: #a5d6ff;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.workstation-exit {
+  max-width: 14rem;
+}
+
+@media (max-width: 760px) {
+  .workstation-layout,
+  .evidence-meta,
+  .workstation-topbar,
+  .office-header {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .workstation-meta,
+  .office-status {
+    text-align: left;
+  }
 }
 
 .scanlines {
