@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
+import { playConfirmTone, playNavigateTone } from "../utils/audio";
 
 const menuItems = ["New Game", "Continue", "Options", "Credits"] as const;
 
 export function MainMenuScene() {
   const setScene = useGameStore((state) => state.setScene);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
+  const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const availableCases = useAuditStore((state) => state.availableCases);
   const selectedCaseId = useAuditStore((state) => state.selectedCaseId);
   const setSelectedCase = useAuditStore((state) => state.setSelectedCase);
@@ -34,14 +36,17 @@ export function MainMenuScene() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "ArrowUp") {
+        playNavigateTone(sfxVolume);
         setSelectedIndex((current) => (current - 1 + menuItems.length) % menuItems.length);
       }
 
       if (event.key === "ArrowDown") {
+        playNavigateTone(sfxVolume);
         setSelectedIndex((current) => (current + 1) % menuItems.length);
       }
 
       if (event.key === "Enter") {
+        playConfirmTone(sfxVolume);
         if (selectedLabel === "Options") {
           setScene("options");
         } else if (selectedLabel === "New Game") {
@@ -54,17 +59,19 @@ export function MainMenuScene() {
       }
 
       if (event.key === "ArrowLeft") {
+        playNavigateTone(sfxVolume);
         cycleCase(-1);
       }
 
       if (event.key === "ArrowRight") {
+        playNavigateTone(sfxVolume);
         cycleCase(1);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cycleCase, selectedLabel, setScene, startNewGame]);
+  }, [cycleCase, selectedLabel, setScene, sfxVolume, startNewGame]);
 
   return (
     <section className="scene scene-menu">
@@ -75,10 +82,24 @@ export function MainMenuScene() {
           <div className="case-select-header">
             <p className="eyebrow">Selected Engagement</p>
             <div className="case-select-controls">
-              <button className="case-switch-button" onClick={() => cycleCase(-1)} aria-label="Previous case">
+              <button
+                className="case-switch-button"
+                onClick={() => {
+                  playNavigateTone(sfxVolume);
+                  cycleCase(-1);
+                }}
+                aria-label="Previous case"
+              >
                 &lt;
               </button>
-              <button className="case-switch-button" onClick={() => cycleCase(1)} aria-label="Next case">
+              <button
+                className="case-switch-button"
+                onClick={() => {
+                  playNavigateTone(sfxVolume);
+                  cycleCase(1);
+                }}
+                aria-label="Next case"
+              >
                 &gt;
               </button>
             </div>
@@ -99,8 +120,14 @@ export function MainMenuScene() {
                 <li key={item}>
                   <button
                     className={`menu-button ${isSelected ? "selected" : ""}`}
-                    onMouseEnter={() => setSelectedIndex(index)}
+                    onMouseEnter={() => {
+                      if (selectedIndex !== index) {
+                        playNavigateTone(sfxVolume);
+                      }
+                      setSelectedIndex(index);
+                    }}
                     onClick={() => {
+                      playConfirmTone(sfxVolume);
                       if (item === "Options") {
                         setScene("options");
                       } else if (item === "New Game") {

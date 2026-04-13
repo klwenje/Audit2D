@@ -1,12 +1,16 @@
 import { useEffect, useMemo } from "react";
 import { OfficeCanvas } from "../game/OfficeCanvas";
 import { deskInteractZone, intersects, PLAYER_SIZE } from "../game/officeLayout";
+import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
+import { playBackTone, playConfirmTone } from "../utils/audio";
 
 export function OfficeScene() {
   const setScene = useGameStore((state) => state.setScene);
   const playerPosition = useGameStore((state) => state.playerPosition);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
+  const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
+  const auditCase = useAuditStore((state) => state.auditCase);
 
   const canUseDesk = useMemo(
     () =>
@@ -25,10 +29,12 @@ export function OfficeScene() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === "e" && canUseDesk) {
+        playConfirmTone(sfxVolume);
         setScene("workstation");
       }
 
       if (event.key === "Escape") {
+        playBackTone(sfxVolume);
         setScene("mainMenu");
         resetOfficeState();
       }
@@ -36,15 +42,16 @@ export function OfficeScene() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canUseDesk, resetOfficeState, setScene]);
+  }, [canUseDesk, resetOfficeState, setScene, sfxVolume]);
 
   return (
     <section className="scene scene-office">
       <div className="scene-card office-card wide">
         <div className="office-header">
           <div>
-            <p className="eyebrow">Day 01: Access Review</p>
+            <p className="eyebrow">Day 01: Fieldwork Sprint</p>
             <h1>OFFICE FLOOR</h1>
+            <p className="scene-copy small office-case-label">{auditCase.title}</p>
           </div>
           <div className="office-status">
             <span>Move: WASD / Arrows</span>

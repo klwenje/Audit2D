@@ -1,4 +1,5 @@
 import { useGameStore } from "../store/useGameStore";
+import { playBackTone, playNavigateTone } from "../utils/audio";
 
 export function OptionsScene() {
   const setScene = useGameStore((state) => state.setScene);
@@ -21,6 +22,8 @@ export function OptionsScene() {
             onChange={(event) =>
               updateSettings({ musicVolume: Number(event.target.value) })
             }
+            onMouseUp={() => playNavigateTone(settings.sfxVolume)}
+            onKeyUp={() => playNavigateTone(settings.sfxVolume)}
           />
         </label>
 
@@ -34,6 +37,8 @@ export function OptionsScene() {
             onChange={(event) =>
               updateSettings({ sfxVolume: Number(event.target.value) })
             }
+            onMouseUp={() => playNavigateTone(settings.sfxVolume)}
+            onKeyUp={() => playNavigateTone(settings.sfxVolume)}
           />
         </label>
 
@@ -46,6 +51,7 @@ export function OptionsScene() {
                 textSpeed: event.target.value as "slow" | "normal" | "fast",
               })
             }
+            onBlur={() => playNavigateTone(settings.sfxVolume)}
           >
             <option value="slow">Slow</option>
             <option value="normal">Normal</option>
@@ -53,7 +59,13 @@ export function OptionsScene() {
           </select>
         </label>
 
-        <button className="menu-button selected" onClick={() => setScene("mainMenu")}>
+        <button
+          className="menu-button selected"
+          onClick={() => {
+            playBackTone(settings.sfxVolume);
+            setScene("mainMenu");
+          }}
+        >
           <span className="menu-indicator">&lt;</span>
           <span>Back</span>
         </button>

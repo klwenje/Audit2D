@@ -1,19 +1,22 @@
 import { useEffect } from "react";
 import { useGameStore } from "../store/useGameStore";
+import { playConfirmTone } from "../utils/audio";
 
 export function SplashScene() {
   const setScene = useGameStore((state) => state.setScene);
+  const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
+        playConfirmTone(sfxVolume);
         setScene("mainMenu");
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setScene]);
+  }, [setScene, sfxVolume]);
 
   return (
     <section className="scene scene-splash">
