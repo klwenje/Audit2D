@@ -2,6 +2,18 @@ import { useMemo } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 
+function getEvidenceArtifactLabel(type: string) {
+  const normalized = type.toLowerCase();
+
+  if (normalized.includes("email")) return "Email Record";
+  if (normalized.includes("log")) return "System Log";
+  if (normalized.includes("ticket")) return "Ticket";
+  if (normalized.includes("screenshot") || normalized.includes("screen")) return "Screenshot";
+  if (normalized.includes("policy")) return "Policy Excerpt";
+  if (normalized.includes("note")) return "Interview Note";
+  return "Case Record";
+}
+
 export function WorkstationScene() {
   const setScene = useGameStore((state) => state.setScene);
   const auditCase = useAuditStore((state) => state.auditCase);
@@ -51,6 +63,13 @@ export function WorkstationScene() {
     practiceFocusIssueIds.includes(issue.id),
   );
 
+  const reviewedCount = visibleEvidence.filter((item) => reviewedEvidenceIds.includes(item.id)).length;
+  const askedInterviewCount = auditCase.interviewPrompts.filter((prompt) =>
+    interviewLogIds.includes(prompt.id),
+  ).length;
+  const selectedEvidenceIndex = visibleEvidence.findIndex((item) => item.id === selectedEvidence.id);
+  const selectedEvidenceNumber = selectedEvidenceIndex >= 0 ? selectedEvidenceIndex + 1 : 1;
+
   return (
     <section className="scene scene-workstation">
       <div className="scene-card workstation-card wide workstation-wide">
@@ -58,10 +77,15 @@ export function WorkstationScene() {
           <div>
             <p className="eyebrow">Desk Terminal Online</p>
             <h1>{auditCase.title}</h1>
+            <p className="office-brief workstation-lead">
+              Review the inbox, cross-check the evidence locker, and turn the record trail into a
+              defensible report.
+            </p>
           </div>
           <div className="workstation-meta">
             <span>Deadline: {auditCase.deadlineDays} days</span>
-            <span>Reviewed: {reviewedEvidenceIds.length}/{visibleEvidence.length}</span>
+            <span>Reviewed: {reviewedCount}/{visibleEvidence.length}</span>
+            <span>Interviews: {askedInterviewCount}/{auditCase.interviewPrompts.length}</span>
           </div>
         </div>
 
@@ -85,6 +109,25 @@ export function WorkstationScene() {
           </section>
         )}
 
+        <div className="workstation-console" aria-label="Case status summary">
+          <div className="console-chip">
+            <span className="console-label">Mode</span>
+            <strong>{runMode === "practice" ? "Practice Replay" : "Active Audit"}</strong>
+          </div>
+          <div className="console-chip">
+            <span className="console-label">Inbox</span>
+            <strong>{auditCase.inbox.length} records</strong>
+          </div>
+          <div className="console-chip">
+            <span className="console-label">Evidence</span>
+            <strong>{visibleEvidence.length} artifacts</strong>
+          </div>
+          <div className="console-chip">
+            <span className="console-label">Findings</span>
+            <strong>{draftedFindings.length} drafted</strong>
+          </div>
+        </div>
+
         <div className="workstation-tabs" role="tablist" aria-label="Workstation navigation">
           {tabs.map((tab) => (
             <button
@@ -99,14 +142,29 @@ export function WorkstationScene() {
 
         {workstationTab === "inbox" && (
           <div className="terminal-panel-stack">
+            <section className="terminal-panel artifact-intro-panel">
+              <p className="terminal-kicker">Incoming audit messages</p>
+              <p className="terminal-muted">
+                Threads, replies, and status updates that shape the case timeline.
+              </p>
+            </section>
             {auditCase.inbox.map((message) => (
-              <article key={message.id} className="mail-card">
-                <div className="mail-header">
-                  <strong>{message.subject}</strong>
-                  <span>{message.from}</span>
+              <article key={message.id} className="mail-card message-card">
+                <div className="artifact-banner">
+                  <div>
+                    <p className="artifact-label">Email Thread</p>
+                    <h3>{message.subject}</h3>
+                  </div>
+                  <span className="artifact-tag">From {message.from}</span>
+                </div>
+                <div className="mail-meta-row">
+                  <span>Sender</span>
+                  <strong>{message.from}</strong>
                 </div>
                 <p className="mail-preview">{message.preview}</p>
-                <p className="mail-body">{message.body}</p>
+                <div className="mail-body-shell">
+                  <p className="mail-body">{message.body}</p>
+                </div>
               </article>
             ))}
           </div>
@@ -114,34 +172,68 @@ export function WorkstationScene() {
 
         {workstationTab === "caseFile" && (
           <div className="workstation-layout single">
-            <section className="terminal-panel">
-              <h2>Audit Objective</h2>
+            <section className="terminal-panel artifact-panel">
+              <div className="artifact-banner">
+                <div>
+                  <p className="artifact-label">Case File</p>
+                  <h2>Audit Objective</h2>
+                </div>
+                <span className="artifact-tag">Scope memo</span>
+              </div>
               <p>{auditCase.objective}</p>
-              <h3>Scope</h3>
-              <ul className="bullet-list">
-                {auditCase.scope.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              <div className="case-record-grid">
+                <div>
+                  <h3>Scope</h3>
+                  <ul className="bullet-list">
+                    {auditCase.scope.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3>Control Families</h3>
+                  <div className="tag-row">
+                    {auditCase.controls.map((control) => (
+                      <span key={control.id} className="tag-chip">
+                        {control.framework}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </section>
 
-            <section className="terminal-panel">
-              <h2>Stakeholders</h2>
-              <ul className="bullet-list">
+            <section className="terminal-panel artifact-panel">
+              <div className="artifact-banner">
+                <div>
+                  <p className="artifact-label">Records</p>
+                  <h2>Stakeholders and Controls</h2>
+                </div>
+                <span className="artifact-tag">{auditCase.stakeholders.length} contacts</span>
+              </div>
+              <div className="record-stack">
                 {auditCase.stakeholders.map((stakeholder) => (
-                  <li key={stakeholder.id}>
-                    <strong>{stakeholder.name}</strong> - {stakeholder.role} ({stakeholder.department})
-                  </li>
+                  <article key={stakeholder.id} className="record-card">
+                    <div className="mail-meta-row">
+                      <span>{stakeholder.department}</span>
+                      <strong>{stakeholder.role}</strong>
+                    </div>
+                    <h3>{stakeholder.name}</h3>
+                  </article>
                 ))}
-              </ul>
+              </div>
               <h3>Controls In Scope</h3>
-              <ul className="bullet-list">
+              <div className="record-stack compact">
                 {auditCase.controls.map((control) => (
-                  <li key={control.id}>
-                    <strong>{control.name}</strong> - {control.framework}
-                  </li>
+                  <article key={control.id} className="record-card compact">
+                    <div className="mail-meta-row">
+                      <span>{control.framework}</span>
+                      <strong>{control.id}</strong>
+                    </div>
+                    <h3>{control.name}</h3>
+                  </article>
                 ))}
-              </ul>
+              </div>
             </section>
           </div>
         )}
@@ -149,8 +241,14 @@ export function WorkstationScene() {
         {workstationTab === "interviews" && (
           <div className="terminal-panel-stack">
             {groupedPrompts.map(({ stakeholder, prompts }) => (
-              <section key={stakeholder.id} className="terminal-panel">
-                <h2>{stakeholder.name}</h2>
+              <section key={stakeholder.id} className="terminal-panel interview-panel">
+                <div className="artifact-banner">
+                  <div>
+                    <p className="artifact-label">Interview Log</p>
+                    <h2>{stakeholder.name}</h2>
+                  </div>
+                  <span className="artifact-tag">{prompts.length} prompts</span>
+                </div>
                 <p className="terminal-muted">
                   {stakeholder.role} - {stakeholder.department}
                 </p>
@@ -160,9 +258,12 @@ export function WorkstationScene() {
                     const asked = interviewLogIds.includes(prompt.id);
 
                     return (
-                      <article key={prompt.id} className="interview-card">
+                      <article key={prompt.id} className="interview-card transcript-card">
                         <div className="interview-question-row">
-                          <strong>{prompt.question}</strong>
+                          <div className="transcript-question">
+                            <span className="transcript-label">Q</span>
+                            <strong>{prompt.question}</strong>
+                          </div>
                           <button
                             className="review-button"
                             onClick={() => logInterviewPrompt(prompt.id)}
@@ -172,11 +273,12 @@ export function WorkstationScene() {
                         </div>
 
                         {asked && (
-                          <div className="interview-answer">
+                          <div className="interview-answer transcript-answer">
+                            <span className="transcript-label answer">A</span>
                             <p>{prompt.answer}</p>
                             {prompt.revealsEvidenceIds && prompt.revealsEvidenceIds.length > 0 && (
                               <p className="terminal-muted">
-                                Evidence unlocked:{" "}
+                                Evidence unlocked: {" "}
                                 {prompt.revealsEvidenceIds
                                   .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
                                   .join(", ")}
@@ -195,8 +297,14 @@ export function WorkstationScene() {
 
         {workstationTab === "evidence" && selectedEvidence && (
           <div className="workstation-layout">
-            <aside className="terminal-panel evidence-sidebar">
-              <h2>Evidence Locker</h2>
+            <aside className="terminal-panel evidence-sidebar artifact-panel">
+              <div className="artifact-banner">
+                <div>
+                  <p className="artifact-label">Evidence Locker</p>
+                  <h2>Artifacts</h2>
+                </div>
+                <span className="artifact-tag">Unlocked {visibleEvidence.length}</span>
+              </div>
               <div className="evidence-list">
                 {visibleEvidence.map((item) => {
                   const reviewed = reviewedEvidenceIds.includes(item.id);
@@ -207,7 +315,8 @@ export function WorkstationScene() {
                       className={`evidence-list-item ${selectedEvidence.id === item.id ? "active" : ""}`}
                       onClick={() => selectEvidence(item.id)}
                     >
-                      <span>{item.title}</span>
+                      <span className="evidence-item-title">{item.title}</span>
+                      <span className="evidence-item-subtitle">{getEvidenceArtifactLabel(item.type)}</span>
                       <span className={`evidence-status ${reviewed ? "reviewed" : ""}`}>
                         {reviewed ? "Reviewed" : item.type}
                       </span>
@@ -217,11 +326,14 @@ export function WorkstationScene() {
               </div>
             </aside>
 
-            <section className="terminal-panel evidence-detail">
+            <section className="terminal-panel evidence-detail artifact-panel">
               <div className="evidence-heading">
                 <div>
+                  <p className="artifact-label">Record Viewer</p>
                   <h2>{selectedEvidence.title}</h2>
-                  <p className="terminal-muted">{selectedEvidence.type.toUpperCase()}</p>
+                  <p className="terminal-muted">
+                    {getEvidenceArtifactLabel(selectedEvidence.type)} - {selectedEvidence.type.toUpperCase()}
+                  </p>
                 </div>
                 <button
                   className="review-button"
@@ -231,7 +343,15 @@ export function WorkstationScene() {
                 </button>
               </div>
 
-              <p>{selectedEvidence.content}</p>
+              <div className="record-sheet">
+                <div className="mail-meta-row">
+                  <span>Artifact ID</span>
+                  <strong>
+                    {selectedEvidence.id} / {selectedEvidenceNumber.toString().padStart(2, "0")}
+                  </strong>
+                </div>
+                <p>{selectedEvidence.content}</p>
+              </div>
 
               <div className="evidence-meta">
                 <div>
@@ -247,7 +367,9 @@ export function WorkstationScene() {
                   <h3>Tags</h3>
                   <div className="tag-row">
                     {selectedEvidence.tags.map((tag) => (
-                      <span key={tag} className="tag-chip">{tag}</span>
+                      <span key={tag} className="tag-chip">
+                        {tag}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -258,8 +380,14 @@ export function WorkstationScene() {
 
         {workstationTab === "findings" && (
           <div className="workstation-layout single">
-            <section className="terminal-panel">
-              <h2>Findings Notebook</h2>
+            <section className="terminal-panel artifact-panel">
+              <div className="artifact-banner">
+                <div>
+                  <p className="artifact-label">Findings Notebook</p>
+                  <h2>Draft Memo</h2>
+                </div>
+                <span className="artifact-tag">{draftedFindings.length} entries</span>
+              </div>
               <div className="finding-form-grid">
                 <label className="option-row">
                   <span>Finding Title</span>
@@ -350,14 +478,20 @@ export function WorkstationScene() {
               </div>
             </section>
 
-            <section className="terminal-panel">
-              <h2>Drafted Findings</h2>
+            <section className="terminal-panel artifact-panel">
+              <div className="artifact-banner">
+                <div>
+                  <p className="artifact-label">Draft Queue</p>
+                  <h2>Working Papers</h2>
+                </div>
+                <span className="artifact-tag">Ready for review</span>
+              </div>
               {draftedFindings.length === 0 && (
                 <p className="terminal-muted">No drafted findings yet. Add at least one before submitting.</p>
               )}
               <div className="terminal-panel-stack">
                 {draftedFindings.map((finding) => (
-                  <article key={finding.id} className="finding-card">
+                  <article key={finding.id} className="finding-card memo-card">
                     <div className="mail-header">
                       <strong>{finding.title}</strong>
                       <span>{finding.severity}</span>
@@ -365,7 +499,7 @@ export function WorkstationScene() {
                     <p className="mail-body">{finding.description}</p>
                     {finding.linkedEvidenceIds.length > 0 && (
                       <p className="terminal-muted">
-                        Evidence:{" "}
+                        Evidence: {" "}
                         {finding.linkedEvidenceIds
                           .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
                           .join(", ")}

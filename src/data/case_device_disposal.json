@@ -1,0 +1,200 @@
+{
+  "id": "case-device-disposal",
+  "title": "IT Asset Retirement and Media Sanitization Audit",
+  "summary": "Assess whether retired devices are tracked, wiped, deactivated, and transferred with proper custody and destruction evidence.",
+  "objective": "Assess whether endpoint retirement, secure wiping, account deactivation, and disposal custody controls are designed and operating effectively.",
+  "deadlineDays": 5,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Retired device inventory reconciliation",
+    "Secure wipe certification",
+    "Deactivation of associated accounts",
+    "Chain of custody for disposal vendor handoff"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Nadia Hama",
+      "role": "IT Asset Manager",
+      "department": "Technology Operations"
+    },
+    {
+      "id": "st-2",
+      "name": "Tomy Kapapa",
+      "role": "Desktop Support Lead",
+      "department": "End User Services"
+    },
+    {
+      "id": "st-3",
+      "name": "Patricia Zulu",
+      "role": "Information Security Officer",
+      "department": "Security Governance"
+    },
+    {
+      "id": "st-4",
+      "name": "Simon Mwansa",
+      "role": "Procurement Specialist",
+      "department": "Supply Chain"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Retired Asset Reconciliation",
+      "description": "Retired devices should be reconciled against the asset register and removed from active inventory promptly.",
+      "framework": "COBIT / DSS01"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "Secure Media Wipe Certification",
+      "description": "Retired endpoints and drives should have evidence of secure wipe or certified destruction.",
+      "framework": "ISO 27001 / A.8"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Account Deactivation for Retired Devices",
+      "description": "User and local accounts associated with retired devices should be deactivated when the device leaves service.",
+      "framework": "NIST CSF / PR.AA"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Documented Disposal Handoff",
+      "description": "Handoffs to disposal vendors should include chain-of-custody evidence and dated signoff.",
+      "framework": "SOC 2 / Asset Disposal"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Asset Register Export",
+      "type": "system",
+      "content": "The asset register still lists 18 laptops as active even though disposal paperwork shows they were collected from the office two weeks ago.",
+      "relatedControls": ["ctrl-1"],
+      "tags": ["Asset Register", "Laptops", "Disposal"]
+    },
+    {
+      "id": "ev-2",
+      "title": "Wipe Certificate Bundle",
+      "type": "report",
+      "content": "The wipe bundle includes certificates for some devices, but several serial numbers are missing and one hard drive entry only says 'queued for erase.'",
+      "relatedControls": ["ctrl-2"],
+      "tags": ["Wipe", "Certificate", "Serial Number"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Endpoint Deactivation Screenshot",
+      "type": "screenshot",
+      "content": "The endpoint management console shows user profiles and cached credentials still present on two retired devices that were marked 'awaiting pickup.'",
+      "relatedControls": ["ctrl-3"],
+      "tags": ["Endpoint", "Credentials", "Retirement"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Disposal Vendor Manifest",
+      "type": "document",
+      "content": "The manifest lists the device pickup date, but the chain-of-custody line is unsigned and the vendor name is abbreviated rather than matched to the approved supplier list.",
+      "relatedControls": ["ctrl-4"],
+      "tags": ["Manifest", "Custody", "Vendor"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Retirement Procedure",
+      "type": "document",
+      "content": "The retirement procedure requires inventory reconciliation, secure wipe certification, account deactivation, and signed handoff to the disposal vendor before removal from service.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Procedure", "Retirement", "Governance"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Pickup Coordination Email",
+      "type": "document",
+      "content": "Procurement confirms the disposal vendor collected the devices during a rush pickup after office relocation, but IT was not given the full serial-number receipt until later.",
+      "relatedControls": ["ctrl-1", "ctrl-4"],
+      "tags": ["Pickup", "Relocation", "Procurement"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Retired Devices Still Active in Inventory",
+      "description": "Devices that had already left the office were still listed as active in the asset register.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-1", "ev-6"],
+      "recommendation": "Reconcile retirement paperwork against the asset register immediately after pickup."
+    },
+    {
+      "id": "issue-2",
+      "title": "Incomplete Wipe Certification",
+      "description": "Secure wipe evidence was incomplete for several retired devices and one drive was not clearly erased.",
+      "severity": "High",
+      "relatedEvidence": ["ev-2"],
+      "recommendation": "Require serial-number-level wipe or destruction evidence before disposal approval is closed."
+    },
+    {
+      "id": "issue-3",
+      "title": "Retired Device Accounts Not Fully Cleared",
+      "description": "Retired endpoints still held cached credentials and user profiles after being flagged for pickup.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-3"],
+      "recommendation": "Use a decommission checklist to remove credentials and local access before asset release."
+    },
+    {
+      "id": "issue-4",
+      "title": "Unsigned Disposal Handoff",
+      "description": "The disposal vendor handoff lacked complete chain-of-custody signoff and vendor identification.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-4", "ev-6"],
+      "recommendation": "Standardize handoff receipts with signed custody trail and approved vendor naming."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "P. Zulu, Audit Manager",
+      "subject": "Kickoff: IT Asset Retirement and Sanitization",
+      "preview": "Check whether old devices really leave service cleanly and with evidence.",
+      "body": "We want to know if retired devices are being wiped, signed off, and removed from inventory properly. Pay special attention to custody evidence and whether account cleanup happens before devices are handed off."
+    },
+    {
+      "id": "msg-2",
+      "from": "Nadia Hama",
+      "subject": "Asset disposal records attached",
+      "preview": "Sending the latest register export, wipe certificates, and pickup notes.",
+      "body": "We had a busy relocation and the pickups were rushed. Some serial-number details arrived later than expected, but the hardware did leave the office."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "Why are retired laptops still marked active?",
+      "answer": "The pickup happened before the asset register was updated. We were waiting on the final receipt from procurement before closing the records.",
+      "revealsEvidenceIds": ["ev-1", "ev-6"]
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-2",
+      "question": "Were all devices securely wiped before handoff?",
+      "answer": "Most were, but a few entries were left in the queue and the wipe certificate bundle never got fully completed.",
+      "revealsEvidenceIds": ["ev-2"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-3",
+      "question": "Were user accounts and profiles removed from retired devices?",
+      "answer": "Not consistently. If the device was moving out quickly, the endpoint team sometimes assumed a later cleanup would catch it.",
+      "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-4",
+      "question": "Was the disposal vendor handoff signed properly?",
+      "answer": "The pickup was done in a hurry during relocation, so the receipt was not fully signed until after the collection window.",
+      "revealsEvidenceIds": ["ev-4"]
+    }
+  ],
+  "closeout": {
+    "managementMessage": "The retirement process is happening, but the control trail is uneven at the point where assets leave service. Inventory, wipe evidence, and custody signoff need better discipline before devices are handed off.",
+    "auditorReflection": "Asset disposal audits expose whether control still exists at the end of the lifecycle. Strong evidence is usually found in the handoff details, not the pickup announcement."
+  }
+}

@@ -21,3 +21,8 @@ Added a printable-style final report sheet with browser print support.
 Added a second audit case and a main menu case picker so the sim now supports multiple engagements.
 Expanded the case library with production change management, incident response, and vendor access governance scenarios.
 Next: add more case families or begin introducing case randomization and difficulty tiers.
+
+## 2026-04-13
+
+Expanded the study library with three new audit cases covering patch and vulnerability management, data retention and records disposal, and IT asset retirement and media sanitization.
+Kept the content aligned to the existing case schema so the new scenarios slot into the current menu, evidence, and interview flow without touching the UI or store architecture.

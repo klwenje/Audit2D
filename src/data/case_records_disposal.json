@@ -1,0 +1,200 @@
+{
+  "id": "case-records-disposal",
+  "title": "Data Retention and Records Disposal Audit",
+  "summary": "Assess whether retention schedules, legal holds, and disposal approvals are enforced across shared drives, mailboxes, and archives.",
+  "objective": "Assess whether data retention, legal hold enforcement, and records disposal controls are designed and operating effectively for business records.",
+  "deadlineDays": 4,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Retention schedule enforcement",
+    "Legal hold management",
+    "Mailbox and shared drive cleanup",
+    "Approved records disposal"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Moses Lemba",
+      "role": "Records Manager",
+      "department": "Governance"
+    },
+    {
+      "id": "st-2",
+      "name": "Angela Sampa",
+      "role": "Microsoft 365 Administrator",
+      "department": "Technology Operations"
+    },
+    {
+      "id": "st-3",
+      "name": "Cynthia Mwila",
+      "role": "Legal Counsel",
+      "department": "Legal and Compliance"
+    },
+    {
+      "id": "st-4",
+      "name": "Howard Phiri",
+      "role": "Finance Operations Manager",
+      "department": "Finance"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Retention Schedule Enforcement",
+      "description": "Records should follow approved retention periods based on business and legal requirements.",
+      "framework": "ISO 27001 / A.5"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "Legal Hold Protection",
+      "description": "Content placed on legal hold should not be deleted or altered until hold release is approved.",
+      "framework": "SOC 2 / Information Retention"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Approved Records Disposal",
+      "description": "Expired records should be disposed of with documented approval and evidence of destruction.",
+      "framework": "COBIT / DSS04"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Mailbox and Shared Drive Review",
+      "description": "Periodic review should remove obsolete content from mailboxes and shared drives according to policy.",
+      "framework": "NIST CSF / PR.DS"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Retention Schedule Matrix",
+      "type": "document",
+      "content": "The approved retention matrix requires finance close documents to be retained for seven years, while the current share folder contains records already flagged for deletion after 18 months.",
+      "relatedControls": ["ctrl-1", "ctrl-4"],
+      "tags": ["Retention", "Finance", "Matrix"]
+    },
+    {
+      "id": "ev-2",
+      "title": "Mailbox Hold Export",
+      "type": "system",
+      "content": "The mailbox export shows the AP director mailbox is on legal hold, but three messages in the hold set were hard-deleted last week.",
+      "relatedControls": ["ctrl-2"],
+      "tags": ["Legal Hold", "Mailbox", "Deletion"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Disposal Certificate",
+      "type": "report",
+      "content": "A disposal certificate exists for the old finance archive drive, but the certificate references only the cage pickup date and does not identify the destruction vendor.",
+      "relatedControls": ["ctrl-3"],
+      "tags": ["Disposal", "Certificate", "Archive"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Shared Drive Cleanup Screenshot",
+      "type": "screenshot",
+      "content": "A shared drive cleanup dashboard shows 214 stale files older than the retention threshold, including duplicate invoice support folders from prior quarters.",
+      "relatedControls": ["ctrl-1", "ctrl-4"],
+      "tags": ["Shared Drive", "Cleanup", "Stale Files"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Hold Release Email",
+      "type": "document",
+      "content": "Legal confirms the AP mailbox hold was not released until after the deletion event and that no retention exception was approved for those messages.",
+      "relatedControls": ["ctrl-2", "ctrl-3"],
+      "tags": ["Hold Release", "Legal", "Email"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Records Retention Policy",
+      "type": "document",
+      "content": "The policy requires retention to follow the approved matrix, legal holds to block deletion, and expired records to be disposed of only after documented authorization.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Policy", "Records", "Governance"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Retention Schedule Not Enforced",
+      "description": "Business records were kept or flagged for deletion outside the approved retention matrix.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-1", "ev-4"],
+      "recommendation": "Align folder and mailbox retention settings to the approved records matrix."
+    },
+    {
+      "id": "issue-2",
+      "title": "Legal Hold Violated",
+      "description": "Messages under legal hold were deleted before the hold was formally released.",
+      "severity": "High",
+      "relatedEvidence": ["ev-2", "ev-5"],
+      "recommendation": "Block deletion for held content until legal release approval is documented."
+    },
+    {
+      "id": "issue-3",
+      "title": "Incomplete Disposal Evidence",
+      "description": "A records disposal certificate did not fully identify the destruction vendor or chain of custody.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-3"],
+      "recommendation": "Require complete destruction certificates with vendor, date, and method details."
+    },
+    {
+      "id": "issue-4",
+      "title": "Stale Shared Content Left in Place",
+      "description": "A shared drive retained a significant volume of obsolete files past the cleanup threshold.",
+      "severity": "Low",
+      "relatedEvidence": ["ev-4"],
+      "recommendation": "Schedule periodic content cleanup and owner attestation for shared repositories."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "J. Mwelwa, Audit Manager",
+      "subject": "Kickoff: Data Retention and Records Disposal",
+      "preview": "Check whether records are being kept and destroyed according to policy rather than convenience.",
+      "body": "The focus here is retention, legal hold, and disposal discipline. We need to know whether content is staying around too long, disappearing too early, or being disposed of without proper evidence."
+    },
+    {
+      "id": "msg-2",
+      "from": "Moses Lemba",
+      "subject": "Retention artifacts attached",
+      "preview": "Sending the current retention matrix, disposal certificate, and cleanup notes.",
+      "body": "We have been working through a backlog of older content and some legal reviews. Let me know which folders or mailbox sets you want to inspect further."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "How are records supposed to be deleted after retention expires?",
+      "answer": "The records team should approve the deletion list and coordinate disposal with IT, but the process is still mostly manual.",
+      "revealsEvidenceIds": ["ev-6"]
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-2",
+      "question": "Why were messages on legal hold deleted from the mailbox?",
+      "answer": "The cleanup job ran before the hold status was refreshed in the mailbox system. We did not have an effective control to block the deletion in time.",
+      "revealsEvidenceIds": ["ev-2", "ev-5"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-3",
+      "question": "Was the hold released before the deletion event?",
+      "answer": "No. The hold stayed active until after the deletion had already occurred, which is why we flagged it for follow-up.",
+      "revealsEvidenceIds": ["ev-5"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-4",
+      "question": "Why are so many old files still on the shared drive?",
+      "answer": "Teams keep working from the same folders between quarters and nobody has fully cleaned out the duplicate support files.",
+      "revealsEvidenceIds": ["ev-4"]
+    }
+  ],
+  "closeout": {
+    "managementMessage": "The retention framework exists, but enforcement is uneven across mailboxes and shared folders. Legal hold and disposal procedures need tighter control and cleaner evidence trails.",
+    "auditorReflection": "Records audits are about timing and authority. The most important question is whether data was kept, deleted, or destroyed at the right moment and with the right approval."
+  }
+}
