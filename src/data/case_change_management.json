@@ -1,0 +1,207 @@
+{
+  "id": "case-change-management",
+  "title": "Production Change Management Audit",
+  "summary": "Assess whether production changes are approved, tested, segregated, and reviewed after deployment.",
+  "objective": "Assess whether production application and infrastructure changes are formally approved, tested, segregated, and implemented with adequate evidence of governance.",
+  "deadlineDays": 5,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Normal and emergency production changes",
+    "Testing evidence before deployment",
+    "Segregation of duties for developers and deployers",
+    "Post-implementation review for failed releases"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Isaac Ngoma",
+      "role": "Engineering Manager",
+      "department": "Product Engineering"
+    },
+    {
+      "id": "st-2",
+      "name": "Naomi Kaluba",
+      "role": "Release Coordinator",
+      "department": "Technology Operations"
+    },
+    {
+      "id": "st-3",
+      "name": "George Sinyangwe",
+      "role": "Platform Engineer",
+      "department": "Cloud Infrastructure"
+    },
+    {
+      "id": "st-4",
+      "name": "Ellen Bwalya",
+      "role": "Service Desk Lead",
+      "department": "IT Operations"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Approved Production Changes",
+      "description": "All production changes should have documented approval before implementation.",
+      "framework": "ITGC / Change Management"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "Pre-Implementation Testing Evidence",
+      "description": "Production deployments should include evidence of successful testing before release.",
+      "framework": "SOC 2 / Change Control"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Segregation of Development and Deployment",
+      "description": "Developers should not directly deploy unreviewed changes into production without compensating control.",
+      "framework": "ISO 27001 / A.8"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Post-Incident Review of Failed Changes",
+      "description": "Failed or rolled-back changes should have a documented post-implementation review.",
+      "framework": "COBIT / BAI06"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Emergency Change Log",
+      "type": "report",
+      "content": "Emergency deployment EC-104 restored service after a billing outage, but the approval field is blank and no CAB follow-up date is listed.",
+      "relatedControls": ["ctrl-1", "ctrl-4"],
+      "tags": ["Emergency Change", "Approval", "CAB"]
+    },
+    {
+      "id": "ev-2",
+      "title": "Release Ticket CHG-8821",
+      "type": "document",
+      "content": "The release ticket for the customer portal upgrade includes implementation steps and rollback notes, but the testing attachment section is empty.",
+      "relatedControls": ["ctrl-2"],
+      "tags": ["Release", "Testing", "Portal"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Production Access Matrix",
+      "type": "document",
+      "content": "The production access matrix shows three developers retain direct deploy rights in the live Kubernetes environment.",
+      "relatedControls": ["ctrl-3"],
+      "tags": ["Access", "Deploy Rights", "Segregation"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Pipeline Deployment Screenshot",
+      "type": "screenshot",
+      "content": "Pipeline history shows a production deployment triggered manually by developer account g.sinyangwe without a linked change ticket reference.",
+      "relatedControls": ["ctrl-1", "ctrl-3"],
+      "tags": ["Pipeline", "Manual Deploy", "Developer"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Incident Review Minutes",
+      "type": "document",
+      "content": "Minutes from the payment outage call note that the rollback succeeded, but the team deferred root-cause review until next sprint and never documented it.",
+      "relatedControls": ["ctrl-4"],
+      "tags": ["Incident", "Rollback", "Postmortem"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Change Management Standard",
+      "type": "document",
+      "content": "The standard requires approval, documented testing, restricted deployment access, and post-implementation review for failed changes.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Policy", "Standard", "Governance"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Emergency Change Missing Approval",
+      "description": "An emergency production change was implemented without documented approval or retrospective CAB review.",
+      "severity": "High",
+      "relatedEvidence": ["ev-1"],
+      "recommendation": "Require formal emergency approval capture and retrospective CAB review for urgent production changes."
+    },
+    {
+      "id": "issue-2",
+      "title": "Production Release Without Testing Evidence",
+      "description": "A production release lacked documented evidence that required testing had been completed before deployment.",
+      "severity": "High",
+      "relatedEvidence": ["ev-2"],
+      "recommendation": "Block production release progression until testing evidence is attached to the change record."
+    },
+    {
+      "id": "issue-3",
+      "title": "Developers Retain Direct Production Deployment Access",
+      "description": "Developer access to production deployments weakens segregation of duties over code promotion.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-3", "ev-4"],
+      "recommendation": "Restrict direct production deployment rights and route releases through controlled service accounts or release operators."
+    },
+    {
+      "id": "issue-4",
+      "title": "Failed Change Lacked Post-Implementation Review",
+      "description": "A failed production change was rolled back without a documented post-incident review or root-cause analysis.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-5"],
+      "recommendation": "Require documented post-implementation review for rolled-back or failed production releases."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "C. Mulenga, Audit Manager",
+      "subject": "Kickoff: Production Change Management",
+      "preview": "Determine whether change control is real or just paperwork around releases.",
+      "body": "Focus on approvals, testing evidence, segregation of duties, and whether failed changes are truly learned from. The question is whether production releases are controlled in practice."
+    },
+    {
+      "id": "msg-2",
+      "from": "Naomi Kaluba",
+      "subject": "Release records attached",
+      "preview": "Sending the recent change log, release ticket, and the current standard.",
+      "body": "Most releases follow the standard path, though we did move quickly during last month's billing incident. Happy to explain the release workflow if helpful."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "Can developers deploy directly into production?",
+      "answer": "A few senior engineers still can, mainly for hotfix speed. We planned to remove that after pipeline hardening but it is still in place.",
+      "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-2",
+      "question": "Why is there no testing evidence attached to CHG-8821?",
+      "answer": "The team said testing happened in staging, but they did not upload screenshots or signoff before the release window opened.",
+      "revealsEvidenceIds": ["ev-2"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-2",
+      "question": "What happened with emergency change EC-104?",
+      "answer": "We were restoring service and skipped the approval capture at the time. We intended to log retrospective CAB review later, but it never got added.",
+      "revealsEvidenceIds": ["ev-1"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-3",
+      "question": "Was the portal deployment triggered through the controlled release path?",
+      "answer": "No, I manually triggered it from the pipeline because the release coordinator was offline and the fix was urgent.",
+      "revealsEvidenceIds": ["ev-4"]
+    },
+    {
+      "id": "ip-5",
+      "stakeholderId": "st-4",
+      "question": "Was a postmortem completed after the payment outage rollback?",
+      "answer": "Operations captured the outage notes, but the formal post-incident review never happened because the team moved to the next release cycle.",
+      "revealsEvidenceIds": ["ev-5"]
+    }
+  ],
+  "closeout": {
+    "managementMessage": "The engagement indicates release activity is moving quickly, but governance over approvals, testing, and follow-up is inconsistent. Production change control needs stronger enforcement if management wants confidence in release quality.",
+    "auditorReflection": "Change audits reward attention to the release trail. The strongest conclusions come from matching who deployed, what evidence existed before deployment, and what happened after things went wrong."
+  }
+}

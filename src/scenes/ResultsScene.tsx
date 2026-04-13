@@ -1,5 +1,6 @@
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
+import { clearSaveData } from "../utils/saveData";
 
 function getRank(score: number) {
   if (score >= 85) return "Audit Lead";
@@ -38,6 +39,22 @@ function getPerformanceNarrative(
 
 function getSeverityLabel(count: number, label: string) {
   return `${count} ${label}${count === 1 ? "" : "s"}`;
+}
+
+function getNextStepAdvice(score: number, missedCount: number, unsupportedCount: number) {
+  if (score >= 85) {
+    return "Push into harder cases next. Your next gain will come from spotting edge cases earlier and tightening report language.";
+  }
+
+  if (unsupportedCount > 0) {
+    return "Focus on evidence discipline. Before writing a finding, make sure you can point to the exact document, extract, or interview support behind it.";
+  }
+
+  if (missedCount > 0) {
+    return "Focus on coverage discipline. Use the scope and controls list as a checklist so each control objective gets tested before you conclude fieldwork.";
+  }
+
+  return "Focus on severity calibration. Compare business impact, frequency, and control breakdown so your ratings match the actual risk story.";
 }
 
 export function ResultsScene() {
@@ -80,6 +97,25 @@ export function ResultsScene() {
   const draftedHigh = draftedFindings.filter((finding) => finding.severity === "High").length;
   const draftedMedium = draftedFindings.filter((finding) => finding.severity === "Medium").length;
   const draftedLow = draftedFindings.filter((finding) => finding.severity === "Low").length;
+  const nextStepAdvice = getNextStepAdvice(
+    finalScore.score,
+    missedIssues.length,
+    unsupportedFindings.length,
+  );
+  const controlCoverage = auditCase.controls.map((control) => {
+    const relatedIssues = auditCase.issues.filter((issue) =>
+      issue.relatedEvidence.some((evidenceId) =>
+        auditCase.evidence.find((evidence) => evidence.id === evidenceId)?.relatedControls.includes(control.id),
+      ),
+    );
+
+    return {
+      control,
+      relatedIssues,
+      matchedIssues: relatedIssues.filter((issue) => finalScore.matchedIssueIds.includes(issue.id)),
+      missedIssues: relatedIssues.filter((issue) => finalScore.missedIssueIds.includes(issue.id)),
+    };
+  });
 
   return (
     <section className="scene scene-results">
@@ -138,6 +174,34 @@ export function ResultsScene() {
               <h3>Auditor Reflection</h3>
               <p>{auditCase.closeout.auditorReflection}</p>
             </div>
+          </div>
+        </section>
+
+        <section className="terminal-panel study-panel">
+          <div className="study-panel-header">
+            <div>
+              <p className="eyebrow">Study Debrief</p>
+              <h2>What This Case Was Teaching</h2>
+            </div>
+            <div className="report-chip">Next Focus</div>
+          </div>
+          <p className="report-summary-copy">{nextStepAdvice}</p>
+
+          <div className="study-grid">
+            {controlCoverage.map(({ control, matchedIssues: coveredIssues, missedIssues: uncoveredIssues }) => (
+              <article key={control.id} className="study-card">
+                <p className="terminal-muted">{control.framework}</p>
+                <h3>{control.name}</h3>
+                <p>{control.description}</p>
+                <p className="study-status">
+                  {uncoveredIssues.length > 0
+                    ? `Missed ${uncoveredIssues.length} issue${uncoveredIssues.length === 1 ? "" : "s"}`
+                    : coveredIssues.length > 0
+                      ? "Covered in your report"
+                      : "No scored issue tied to this control"}
+                </p>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -234,17 +298,42 @@ export function ResultsScene() {
 
           <section className="terminal-panel">
             <h2>Missed Issues</h2>
-            <ul className="bullet-list">
+            <div className="terminal-panel-stack">
               {missedIssues.length > 0 ? (
                 missedIssues.map((issue) => (
-                  <li key={issue.id}>
-                    <strong>{issue.title}</strong> - {issue.severity}
-                  </li>
+                  <article key={issue.id} className="study-review-card">
+                    <div className="mail-header">
+                      <strong>{issue.title}</strong>
+                      <span>{issue.severity}</span>
+                    </div>
+                    <p className="mail-body">{issue.description}</p>
+                    <p className="terminal-muted">
+                      Recommendation: {issue.recommendation}
+                    </p>
+                    <p className="terminal-muted">
+                      Evidence to notice:{" "}
+                      {issue.relatedEvidence
+                        .map((evidenceId) => auditCase.evidence.find((entry) => entry.id === evidenceId)?.title ?? evidenceId)
+                        .join(", ")}
+                    </p>
+                    <p className="terminal-muted">
+                      Controls touched:{" "}
+                      {Array.from(
+                        new Set(
+                          issue.relatedEvidence.flatMap((evidenceId) =>
+                            auditCase.evidence.find((entry) => entry.id === evidenceId)?.relatedControls ?? [],
+                          ),
+                        ),
+                      )
+                        .map((controlId) => auditCase.controls.find((entry) => entry.id === controlId)?.name ?? controlId)
+                        .join(", ")}
+                    </p>
+                  </article>
                 ))
               ) : (
-                <li>You captured all expected issues.</li>
+                <p className="terminal-muted">You captured all expected issues.</p>
               )}
-            </ul>
+            </div>
           </section>
 
           <section className="terminal-panel">
@@ -290,6 +379,7 @@ export function ResultsScene() {
             onClick={() => {
               resetAuditProgress();
               resetOfficeState();
+              clearSaveData();
               setScene("mainMenu");
             }}
           >

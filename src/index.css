@@ -118,6 +118,11 @@ h1 {
   max-width: 24rem;
 }
 
+.menu-save-label {
+  margin-top: 0.45rem;
+  color: #9de4b0;
+}
+
 .report-lead {
   max-width: 40rem;
   margin-top: 0.55rem;
@@ -594,6 +599,48 @@ h1 {
   gap: 1rem;
 }
 
+.study-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.study-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.study-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.study-card,
+.study-review-card {
+  padding: 0.95rem;
+  border: 1px solid #36536c;
+  background: rgba(10, 17, 29, 0.92);
+}
+
+.study-card h3 {
+  margin: 0.2rem 0 0.55rem;
+  color: #fff7bf;
+}
+
+.study-card p,
+.study-review-card p {
+  margin: 0.45rem 0 0;
+}
+
+.study-status {
+  color: #9de4b0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.78rem;
+}
+
 .report-sheet {
   padding: 1.35rem;
   border: 1px solid #aeb9c8;
@@ -693,7 +740,9 @@ h1 {
   .results-grid,
   .summary-metrics,
   .report-closeout-grid,
+  .study-grid,
   .report-summary-header,
+  .study-panel-header,
   .report-sheet-grid,
   .report-sheet-header {
     grid-template-columns: 1fr;

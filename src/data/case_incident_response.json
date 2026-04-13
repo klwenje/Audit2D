@@ -1,0 +1,206 @@
+{
+  "id": "case-incident-response",
+  "title": "Incident Response Readiness Audit",
+  "summary": "Assess whether security incidents are triaged, escalated, contained, and documented quickly enough to support resilient response.",
+  "objective": "Assess whether the incident response process for security events is designed and operating effectively across detection, escalation, containment, and post-incident review.",
+  "deadlineDays": 4,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Security alert triage",
+    "Major incident escalation",
+    "Containment actions for suspicious activity",
+    "Post-incident documentation and lessons learned"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Ruth Chibesa",
+      "role": "SOC Analyst",
+      "department": "Security Operations"
+    },
+    {
+      "id": "st-2",
+      "name": "Patrick Lungu",
+      "role": "Infrastructure Manager",
+      "department": "Technology Services"
+    },
+    {
+      "id": "st-3",
+      "name": "Mercy Chileshe",
+      "role": "Risk Manager",
+      "department": "Enterprise Risk"
+    },
+    {
+      "id": "st-4",
+      "name": "Doreen Mumba",
+      "role": "Service Desk Supervisor",
+      "department": "IT Support"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Timely Triage of Critical Alerts",
+      "description": "Critical security alerts should be reviewed within the defined response window.",
+      "framework": "NIST CSF / DE.AE"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "Formal Major Incident Escalation",
+      "description": "Material security incidents should be escalated according to the major incident playbook.",
+      "framework": "ISO 27001 / A.5"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Documented Containment Actions",
+      "description": "Containment decisions should be documented with timestamps and responsible owners.",
+      "framework": "SOC 2 / Security Incident Management"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Post-Incident Review Completion",
+      "description": "Significant incidents should conclude with lessons learned and action tracking.",
+      "framework": "COBIT / DSS02"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Phishing Incident Timeline",
+      "type": "report",
+      "content": "Timeline for the payroll phishing event shows the malicious inbox rule alert triggered at 08:11, but analyst review was not recorded until 11:46.",
+      "relatedControls": ["ctrl-1"],
+      "tags": ["Phishing", "Timeline", "Alert"]
+    },
+    {
+      "id": "ev-2",
+      "title": "SIEM Critical Alert Queue",
+      "type": "system",
+      "content": "Queue export shows four critical alerts marked open beyond SLA, including one impossible-travel event affecting the CFO mailbox.",
+      "relatedControls": ["ctrl-1", "ctrl-2"],
+      "tags": ["SIEM", "SLA", "Critical Alerts"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Containment Chat Transcript",
+      "type": "document",
+      "content": "The response chat confirms the team reset the user's password and blocked forwarding rules, but no ticket captured the exact containment owner or timestamps.",
+      "relatedControls": ["ctrl-3"],
+      "tags": ["Containment", "Chat", "Actions"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Major Incident Register",
+      "type": "document",
+      "content": "The major incident register does not include the phishing event even though the service impact threshold would have required escalation.",
+      "relatedControls": ["ctrl-2"],
+      "tags": ["Escalation", "Register", "Major Incident"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Lessons Learned Tracker",
+      "type": "screenshot",
+      "content": "The tracker contains an open placeholder for the payroll phishing review with no owner and no completion date.",
+      "relatedControls": ["ctrl-4"],
+      "tags": ["Lessons Learned", "Tracker", "Follow-up"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Incident Response Procedure",
+      "type": "document",
+      "content": "The procedure defines triage SLAs, major incident escalation criteria, containment documentation, and mandatory post-incident review for material events.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Procedure", "Playbook", "Governance"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Critical Security Alert Not Triaged Within SLA",
+      "description": "A critical phishing-related alert remained unreviewed beyond the defined triage window.",
+      "severity": "High",
+      "relatedEvidence": ["ev-1", "ev-2"],
+      "recommendation": "Enforce alert queue monitoring and escalation for critical events breaching response SLA."
+    },
+    {
+      "id": "issue-2",
+      "title": "Material Security Event Not Escalated as Major Incident",
+      "description": "A significant phishing incident was not recorded or escalated through the major incident process.",
+      "severity": "High",
+      "relatedEvidence": ["ev-2", "ev-4"],
+      "recommendation": "Apply major incident criteria consistently and require formal register entry for qualifying events."
+    },
+    {
+      "id": "issue-3",
+      "title": "Containment Actions Not Fully Documented",
+      "description": "Containment activity occurred, but ownership and exact timing were not formally captured.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-3"],
+      "recommendation": "Record containment actions in a formal ticket with timestamps, ownership, and decision rationale."
+    },
+    {
+      "id": "issue-4",
+      "title": "Post-Incident Review Not Completed",
+      "description": "The incident lacked a completed lessons-learned review and tracked remediation actions.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-5"],
+      "recommendation": "Require post-incident review completion with assigned owners and due dates for follow-up actions."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "L. Phiri, Audit Manager",
+      "subject": "Kickoff: Incident Response Readiness",
+      "preview": "Test whether the response process is actually fast and disciplined during real events.",
+      "body": "We are looking for operational readiness, not just a policy binder. Focus on whether alerts are triaged quickly, incidents are escalated properly, and response actions are documented well enough to stand up after the fact."
+    },
+    {
+      "id": "msg-2",
+      "from": "Ruth Chibesa",
+      "subject": "Case material attached",
+      "preview": "Sharing the alert queue, incident timeline, and current response procedure.",
+      "body": "The phishing case was messy because several alerts landed the same morning. I have attached the queue extract and response timeline to help with your review."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "Why was the payroll phishing alert reviewed so late?",
+      "answer": "We had multiple critical alerts that morning and only one analyst covering the queue. The alert stayed open longer than it should have.",
+      "revealsEvidenceIds": ["ev-1"]
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-1",
+      "question": "Was the event escalated as a major incident?",
+      "answer": "No. We treated it as a contained mailbox issue, even though the service impact and executive exposure would normally meet the escalation threshold.",
+      "revealsEvidenceIds": ["ev-4"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-2",
+      "question": "Were containment actions documented anywhere formal?",
+      "answer": "The team acted quickly in chat and on the admin console, but the formal incident ticket was not updated with the detailed containment steps.",
+      "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-3",
+      "question": "Was a lessons-learned review completed after the incident?",
+      "answer": "We scheduled one but never closed it out. The action tracker still shows it as pending without an owner.",
+      "revealsEvidenceIds": ["ev-5"]
+    },
+    {
+      "id": "ip-5",
+      "stakeholderId": "st-4",
+      "question": "What was service desk told during the event?",
+      "answer": "Support was told to watch for mailbox complaints, but no formal major incident bridge was opened, so communication stayed informal."
+    }
+  ],
+  "closeout": {
+    "managementMessage": "The incident response process is defined, but execution during live events is inconsistent. Triage speed, escalation discipline, and follow-up documentation need improvement to support credible response readiness.",
+    "auditorReflection": "Incident audits reward timeline thinking. The real story usually emerges when you line up alert time, response time, escalation choices, and what was never documented."
+  }
+}

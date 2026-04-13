@@ -19,4 +19,5 @@ Used interview responses to unlock more evidence and reinforce fieldwork discove
 Improved the results screen with an executive summary, engagement metrics, and stronger closeout narrative.
 Added a printable-style final report sheet with browser print support.
 Added a second audit case and a main menu case picker so the sim now supports multiple engagements.
-Next: light UI/audio polish or basic save/continue support.
+Expanded the case library with production change management, incident response, and vendor access governance scenarios.
+Next: add more case families or begin introducing case randomization and difficulty tiers.

@@ -2,8 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { playConfirmTone, playNavigateTone } from "../utils/audio";
+import { loadSaveData } from "../utils/saveData";
 
 const menuItems = ["New Game", "Continue", "Options", "Credits"] as const;
+
+function formatSavedAt(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Save timestamp unavailable";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
 
 export function MainMenuScene() {
   const setScene = useGameStore((state) => state.setScene);
@@ -14,6 +28,10 @@ export function MainMenuScene() {
   const setSelectedCase = useAuditStore((state) => state.setSelectedCase);
   const beginSelectedCase = useAuditStore((state) => state.beginSelectedCase);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const saveData = loadSaveData();
+  const continueScene = saveData?.scene && saveData.scene !== "splash" ? saveData.scene : "office";
+  const hasSaveData = Boolean(saveData);
+  const lastSavedLabel = saveData ? formatSavedAt(saveData.savedAt) : "No active save on disk";
 
   const selectedLabel = useMemo(() => menuItems[selectedIndex], [selectedIndex]);
   const selectedCaseIndex = useMemo(
@@ -51,10 +69,12 @@ export function MainMenuScene() {
           setScene("options");
         } else if (selectedLabel === "New Game") {
           startNewGame();
+        } else if (selectedLabel === "Continue" && hasSaveData) {
+          setScene(continueScene);
         } else if (selectedLabel === "Credits") {
           window.alert("Audit Desk Retro\nDesigned as a lightweight indie-style audit simulator.");
         } else {
-          window.alert("Continue will be wired once save data exists.");
+          window.alert("No save data found yet. Start a run first, then Continue will resume it.");
         }
       }
 
@@ -71,7 +91,7 @@ export function MainMenuScene() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [cycleCase, selectedLabel, setScene, sfxVolume, startNewGame]);
+  }, [continueScene, cycleCase, hasSaveData, selectedLabel, setScene, sfxVolume, startNewGame]);
 
   return (
     <section className="scene scene-menu">
@@ -132,15 +152,17 @@ export function MainMenuScene() {
                         setScene("options");
                       } else if (item === "New Game") {
                         startNewGame();
+                      } else if (item === "Continue" && hasSaveData) {
+                        setScene(continueScene);
                       } else if (item === "Credits") {
                         window.alert("Audit Desk Retro\nDesigned as a lightweight indie-style audit simulator.");
                       } else {
-                        window.alert("Continue will be wired once save data exists.");
+                        window.alert("No save data found yet. Start a run first, then Continue will resume it.");
                       }
                     }}
                   >
                     <span className="menu-indicator">{isSelected ? ">" : ""}</span>
-                    <span>{item}</span>
+                    <span>{item === "Continue" && !hasSaveData ? "Continue (No Save)" : item}</span>
                   </button>
                 </li>
               );
@@ -149,6 +171,9 @@ export function MainMenuScene() {
         </nav>
         <p className="scene-copy small">
           Use Arrow Keys and Enter. Left and Right switch case files.
+        </p>
+        <p className="scene-copy small menu-save-label">
+          {hasSaveData ? `Last saved: ${lastSavedLabel}` : lastSavedLabel}
         </p>
       </div>
     </section>

@@ -11,6 +11,20 @@ type FindingDraftForm = {
   linkedEvidenceIds: string[];
 };
 
+export type AuditStateSnapshot = {
+  selectedCaseId: string;
+  auditCaseId: string;
+  selectedEvidenceId: string;
+  reviewedEvidenceIds: string[];
+  discoveredEvidenceIds: string[];
+  interviewLogIds: string[];
+  workstationTab: AuditState["workstationTab"];
+  draftedFindings: DraftFinding[];
+  findingDraftForm: FindingDraftForm;
+  reportSubmitted: boolean;
+  finalScore: ScoreBreakdown | null;
+};
+
 type AuditState = {
   availableCases: AuditCase[];
   selectedCaseId: string;
@@ -26,6 +40,8 @@ type AuditState = {
   finalScore: ScoreBreakdown | null;
   setSelectedCase: (caseId: string) => void;
   beginSelectedCase: () => void;
+  hydrateFromSave: (snapshot: AuditStateSnapshot) => void;
+  getSnapshot: () => AuditStateSnapshot;
   setWorkstationTab: (tab: AuditState["workstationTab"]) => void;
   selectEvidence: (evidenceId: string) => void;
   markEvidenceReviewed: (evidenceId: string) => void;
@@ -66,7 +82,28 @@ function createCaseProgressState(auditCase: AuditCase) {
 
 const starterCase = auditCases[0];
 
-export const useAuditStore = create<AuditState>((set) => ({
+function sanitizeEvidenceSelection(auditCase: AuditCase, evidenceId: string) {
+  return auditCase.evidence.some((item) => item.id === evidenceId)
+    ? evidenceId
+    : auditCase.initialEvidenceIds[0] ?? auditCase.evidence[0]?.id ?? "";
+}
+
+function sanitizeEvidenceIds(auditCase: AuditCase, evidenceIds: string[]) {
+  return evidenceIds.filter((evidenceId) => auditCase.evidence.some((item) => item.id === evidenceId));
+}
+
+function sanitizeInterviewIds(auditCase: AuditCase, promptIds: string[]) {
+  return promptIds.filter((promptId) => auditCase.interviewPrompts.some((prompt) => prompt.id === promptId));
+}
+
+function sanitizeDraftFindings(auditCase: AuditCase, findings: DraftFinding[]) {
+  return findings.map((finding) => ({
+    ...finding,
+    linkedEvidenceIds: sanitizeEvidenceIds(auditCase, finding.linkedEvidenceIds),
+  }));
+}
+
+export const useAuditStore = create<AuditState>((set, get) => ({
   availableCases: auditCases,
   selectedCaseId: starterCase.id,
   ...createCaseProgressState(starterCase),
@@ -85,6 +122,50 @@ export const useAuditStore = create<AuditState>((set) => ({
       const nextCase = getAuditCase(state.selectedCaseId);
       return createCaseProgressState(nextCase);
     }),
+  hydrateFromSave: (snapshot) =>
+    set(() => {
+      const auditCase = getAuditCase(snapshot.auditCaseId);
+      const discoveredEvidenceIds = Array.from(
+        new Set([
+          ...auditCase.initialEvidenceIds,
+          ...sanitizeEvidenceIds(auditCase, snapshot.discoveredEvidenceIds),
+        ]),
+      );
+
+      return {
+        selectedCaseId: getAuditCase(snapshot.selectedCaseId).id,
+        auditCase,
+        selectedEvidenceId: sanitizeEvidenceSelection(auditCase, snapshot.selectedEvidenceId),
+        reviewedEvidenceIds: sanitizeEvidenceIds(auditCase, snapshot.reviewedEvidenceIds),
+        discoveredEvidenceIds,
+        interviewLogIds: sanitizeInterviewIds(auditCase, snapshot.interviewLogIds),
+        workstationTab: snapshot.workstationTab,
+        draftedFindings: sanitizeDraftFindings(auditCase, snapshot.draftedFindings),
+        findingDraftForm: {
+          ...snapshot.findingDraftForm,
+          linkedEvidenceIds: sanitizeEvidenceIds(auditCase, snapshot.findingDraftForm.linkedEvidenceIds),
+        },
+        reportSubmitted: snapshot.reportSubmitted,
+        finalScore: snapshot.finalScore,
+      };
+    }),
+  getSnapshot: (): AuditStateSnapshot => {
+    const state = get();
+
+    return {
+      selectedCaseId: state.selectedCaseId,
+      auditCaseId: state.auditCase.id,
+      selectedEvidenceId: state.selectedEvidenceId,
+      reviewedEvidenceIds: state.reviewedEvidenceIds,
+      discoveredEvidenceIds: state.discoveredEvidenceIds,
+      interviewLogIds: state.interviewLogIds,
+      workstationTab: state.workstationTab,
+      draftedFindings: state.draftedFindings,
+      findingDraftForm: state.findingDraftForm,
+      reportSubmitted: state.reportSubmitted,
+      finalScore: state.finalScore,
+    };
+  },
   setWorkstationTab: (tab) => set({ workstationTab: tab }),
   selectEvidence: (evidenceId) => set({ selectedEvidenceId: evidenceId }),
   markEvidenceReviewed: (evidenceId) =>

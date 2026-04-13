@@ -1,0 +1,192 @@
+{
+  "id": "case-vendor-access",
+  "title": "Third-Party Access Governance Audit",
+  "summary": "Assess whether vendor access is approved, time-bound, monitored, and removed promptly after business need ends.",
+  "objective": "Assess whether third-party access to internal systems is approved, time-bound, monitored, and removed in accordance with vendor governance requirements.",
+  "deadlineDays": 5,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Vendor onboarding approval",
+    "Time-bound remote access",
+    "Monitoring of third-party privileged sessions",
+    "Timely removal of inactive vendor accounts"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Helen Mweetwa",
+      "role": "Vendor Manager",
+      "department": "Procurement"
+    },
+    {
+      "id": "st-2",
+      "name": "Joseph Chintu",
+      "role": "Infrastructure Administrator",
+      "department": "Technology Operations"
+    },
+    {
+      "id": "st-3",
+      "name": "Alice Zimba",
+      "role": "Security Governance Lead",
+      "department": "Information Security"
+    },
+    {
+      "id": "st-4",
+      "name": "Kennedy Mwelwa",
+      "role": "Application Owner",
+      "department": "Core Systems"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Approved Vendor Access Requests",
+      "description": "Vendor accounts should be provisioned only after formal business approval.",
+      "framework": "ISO 27001 / A.5"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "Time-Bound Third-Party Access",
+      "description": "Vendor access should expire automatically based on approved engagement duration.",
+      "framework": "NIST CSF / PR.AA"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Monitoring of Vendor Privileged Activity",
+      "description": "Privileged third-party sessions should be logged and monitored.",
+      "framework": "SOC 2 / Logical Access"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Removal of Inactive Vendor Accounts",
+      "description": "Inactive or ended vendor accounts should be removed promptly.",
+      "framework": "COBIT / DSS05"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Vendor Access Request Form",
+      "type": "document",
+      "content": "Request form for Delta Support access includes technical details but the business owner approval signature is blank.",
+      "relatedControls": ["ctrl-1"],
+      "tags": ["Approval", "Vendor", "Request"]
+    },
+    {
+      "id": "ev-2",
+      "title": "VPN Vendor Account Listing",
+      "type": "system",
+      "content": "VPN listing shows account delta_support_admin remains active 63 days after the contracted support window ended.",
+      "relatedControls": ["ctrl-2", "ctrl-4"],
+      "tags": ["VPN", "Vendor Account", "Expiry"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Privileged Session Log Export",
+      "type": "report",
+      "content": "Export for vendor sessions shows multiple administrator logins from the vendor account, but command logging is disabled for the maintenance bastion.",
+      "relatedControls": ["ctrl-3"],
+      "tags": ["Monitoring", "Session Logs", "Privileged"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Contract End Notice",
+      "type": "document",
+      "content": "Procurement notice confirms the Delta Support engagement ended on January 31 and no extension was approved.",
+      "relatedControls": ["ctrl-2", "ctrl-4"],
+      "tags": ["Contract", "Termination", "Vendor"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Security Review Memo",
+      "type": "document",
+      "content": "Security review memo requires all vendor admin access to be time-bound and monitored through the bastion recording feature.",
+      "relatedControls": ["ctrl-2", "ctrl-3"],
+      "tags": ["Security Review", "Monitoring", "Access"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Third-Party Access Standard",
+      "type": "document",
+      "content": "The standard requires business approval, defined expiry, monitored privileged access, and prompt deprovisioning of third-party accounts.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Policy", "Third Party", "Standard"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Vendor Access Provisioned Without Business Approval",
+      "description": "A vendor access request was processed without documented business-owner approval.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-1"],
+      "recommendation": "Require completed business approval before provisioning third-party access."
+    },
+    {
+      "id": "issue-2",
+      "title": "Vendor Access Not Time-Bound or Removed Promptly",
+      "description": "A vendor administrative account remained active well past the end of the approved engagement window.",
+      "severity": "High",
+      "relatedEvidence": ["ev-2", "ev-4"],
+      "recommendation": "Implement automatic expiry and periodic review for vendor accounts tied to contract end dates."
+    },
+    {
+      "id": "issue-3",
+      "title": "Privileged Vendor Sessions Not Fully Monitored",
+      "description": "Vendor privileged activity occurred without complete command-level logging on the bastion host.",
+      "severity": "High",
+      "relatedEvidence": ["ev-3", "ev-5"],
+      "recommendation": "Enable full session recording and command logging for all vendor privileged access paths."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "R. Lungu, Audit Manager",
+      "subject": "Kickoff: Third-Party Access Governance",
+      "preview": "Test whether vendor access really ends when the contract ends and whether high-risk sessions are watched closely enough.",
+      "body": "The focus is third-party risk in practice: approval, expiry, monitoring, and deprovisioning. Pay special attention to whether technical controls actually enforce the policy promises."
+    },
+    {
+      "id": "msg-2",
+      "from": "Helen Mweetwa",
+      "subject": "Vendor access records",
+      "preview": "Sharing the Delta Support request, contract end note, and current access standard.",
+      "body": "Delta Support previously handled urgent maintenance tasks, so some access may have remained available for convenience. Let me know what else you need."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "Was Delta Support approved by the business owner before access was created?",
+      "answer": "The technical request moved ahead first because the maintenance was urgent. We expected the owner to sign later, but that never happened.",
+      "revealsEvidenceIds": ["ev-1"]
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-1",
+      "question": "Did the support contract get extended beyond January 31?",
+      "answer": "No. Procurement closed the engagement at the end of January and no extension was approved.",
+      "revealsEvidenceIds": ["ev-4"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-2",
+      "question": "Why is the vendor VPN account still active?",
+      "answer": "We left it enabled in case maintenance work came back. There is no automatic expiry tied to the contract end date.",
+      "revealsEvidenceIds": ["ev-2"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-3",
+      "question": "Are vendor admin sessions fully monitored through the bastion?",
+      "answer": "They should be, but the command capture setting was disabled during troubleshooting and not restored afterwards.",
+      "revealsEvidenceIds": ["ev-3", "ev-5"]
+    }
+  ],
+  "closeout": {
+    "managementMessage": "Third-party access controls are defined, but enforcement over approvals, expiry, and monitoring is inconsistent. Vendor access needs stronger lifecycle control to reduce avoidable external access risk.",
+    "auditorReflection": "Vendor access audits reward lifecycle thinking. The risk usually sits in the gap between contract dates, active accounts, and whether anyone is really watching privileged activity."
+  }
+}
