@@ -52,9 +52,14 @@ export function OfficeScene() {
             <p className="eyebrow">Day 01: Fieldwork Sprint</p>
             <h1>OFFICE FLOOR</h1>
             <p className="scene-copy small office-case-label">{auditCase.title}</p>
+            <p className="scene-copy small office-brief">
+              Fluorescent records room. Archive wall to the left, meeting table in the middle,
+              terminal desk on the right.
+            </p>
           </div>
           <div className="office-status">
             <span>Move: WASD / Arrows</span>
+            <span>Use desk: E</span>
             <span>Menu: Esc</span>
           </div>
         </div>

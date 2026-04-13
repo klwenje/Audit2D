@@ -1,6 +1,13 @@
+import { useEffect, useRef } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { clearSaveData } from "../utils/saveData";
+import {
+  clearPracticeReplay,
+  getCaseMasteryStats,
+  queuePracticeReplay,
+  recordCaseStudyRun,
+} from "../utils/studyProgress";
 
 function getRank(score: number) {
   if (score >= 85) return "Audit Lead";
@@ -65,6 +72,21 @@ export function ResultsScene() {
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
+  const didRecordRunRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!finalScore) {
+      return;
+    }
+
+    const runKey = `${auditCase.id}:${finalScore.score}:${finalScore.missedIssueIds.join("|")}`;
+    if (didRecordRunRef.current === runKey) {
+      return;
+    }
+
+    didRecordRunRef.current = runKey;
+    recordCaseStudyRun(auditCase.id, finalScore.score, finalScore.missedIssueIds);
+  }, [auditCase.id, finalScore]);
 
   if (!finalScore) {
     return (
@@ -102,6 +124,10 @@ export function ResultsScene() {
     missedIssues.length,
     unsupportedFindings.length,
   );
+  const caseMastery = getCaseMasteryStats(auditCase.id);
+  const projectedRuns = caseMastery.timesPlayed + 1;
+  const projectedBestScore =
+    caseMastery.bestScore === null ? finalScore.score : Math.max(caseMastery.bestScore, finalScore.score);
   const controlCoverage = auditCase.controls.map((control) => {
     const relatedIssues = auditCase.issues.filter((issue) =>
       issue.relatedEvidence.some((evidenceId) =>
@@ -186,6 +212,34 @@ export function ResultsScene() {
             <div className="report-chip">Next Focus</div>
           </div>
           <p className="report-summary-copy">{nextStepAdvice}</p>
+
+          <div className="study-history-card">
+            <div className="study-history-header">
+              <div>
+                <p className="eyebrow">Case Mastery</p>
+                <h3>Career Snapshot</h3>
+              </div>
+              <div className="report-chip">{projectedRuns} Runs</div>
+            </div>
+            <div className="study-stat-grid compact">
+              <article className="study-stat">
+                <span className="metric-label">Projected Best</span>
+                <strong>{`${projectedBestScore}/100`}</strong>
+              </article>
+              <article className="study-stat">
+                <span className="metric-label">Current Misses</span>
+                <strong>{missedIssues.length}</strong>
+              </article>
+              <article className="study-stat">
+                <span className="metric-label">Evidence Reviewed</span>
+                <strong>{reviewedEvidenceIds.length}</strong>
+              </article>
+              <article className="study-stat">
+                <span className="metric-label">Replay Ready</span>
+                <strong>{missedIssues.length > 0 ? "Yes" : "No"}</strong>
+              </article>
+            </div>
+          </div>
 
           <div className="study-grid">
             {controlCoverage.map(({ control, matchedIssues: coveredIssues, missedIssues: uncoveredIssues }) => (
@@ -368,6 +422,7 @@ export function ResultsScene() {
           <button
             className="menu-button"
             onClick={() => {
+              clearPracticeReplay();
               setScene("workstation");
             }}
           >
@@ -375,8 +430,30 @@ export function ResultsScene() {
             <span>Back to Workstation</span>
           </button>
           <button
+            className="menu-button"
+            onClick={() => {
+              if (finalScore.missedIssueIds.length === 0) {
+                return;
+              }
+
+              queuePracticeReplay(auditCase.id, finalScore.missedIssueIds);
+              resetAuditProgress();
+              resetOfficeState();
+              setScene("mainMenu");
+            }}
+            disabled={finalScore.missedIssueIds.length === 0}
+          >
+            <span className="menu-indicator">&gt;</span>
+            <span>
+              {finalScore.missedIssueIds.length > 0
+                ? `Practice Missed Issues (${finalScore.missedIssueIds.length})`
+                : "Practice Missed Issues"}
+            </span>
+          </button>
+          <button
             className="menu-button selected"
             onClick={() => {
+              clearPracticeReplay();
               resetAuditProgress();
               resetOfficeState();
               clearSaveData();

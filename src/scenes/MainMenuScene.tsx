@@ -3,6 +3,13 @@ import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { playConfirmTone, playNavigateTone } from "../utils/audio";
 import { loadSaveData } from "../utils/saveData";
+import {
+  clearPracticeReplay,
+  consumePracticeReplay,
+  getCaseMasteryStats,
+  loadPracticeReplay,
+  queuePracticeReplay,
+} from "../utils/studyProgress";
 
 const menuItems = ["New Game", "Continue", "Options", "Credits"] as const;
 
@@ -27,7 +34,9 @@ export function MainMenuScene() {
   const selectedCaseId = useAuditStore((state) => state.selectedCaseId);
   const setSelectedCase = useAuditStore((state) => state.setSelectedCase);
   const beginSelectedCase = useAuditStore((state) => state.beginSelectedCase);
+  const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [practiceReplaySession, setPracticeReplaySession] = useState(() => loadPracticeReplay());
   const saveData = loadSaveData();
   const continueScene = saveData?.scene && saveData.scene !== "splash" ? saveData.scene : "office";
   const hasSaveData = Boolean(saveData);
@@ -39,17 +48,57 @@ export function MainMenuScene() {
     [availableCases, selectedCaseId],
   );
   const selectedCase = availableCases[selectedCaseIndex] ?? availableCases[0];
+  const selectedCaseStudy = useMemo(() => getCaseMasteryStats(selectedCase.id), [selectedCase.id]);
+  const selectedCaseFocusLabels = useMemo(
+    () =>
+      selectedCaseStudy.lastMissedIssueIds
+        .map((issueId) => selectedCase.issues.find((issue) => issue.id === issueId)?.title ?? issueId)
+        .filter(Boolean),
+    [selectedCase, selectedCaseStudy.lastMissedIssueIds],
+  );
 
   const startNewGame = () => {
+    clearPracticeReplay();
+    setPracticeReplaySession(null);
     beginSelectedCase();
     resetOfficeState();
     setScene("office");
+  };
+
+  const startPracticeReplay = () => {
+    if (selectedCaseStudy.lastMissedIssueIds.length === 0) {
+      return;
+    }
+
+    queuePracticeReplay(selectedCase.id, selectedCaseStudy.lastMissedIssueIds);
+    setPracticeReplaySession(loadPracticeReplay());
   };
 
   const cycleCase = (direction: -1 | 1) => {
     const nextIndex = (selectedCaseIndex + direction + availableCases.length) % availableCases.length;
     setSelectedCase(availableCases[nextIndex].id);
   };
+
+  useEffect(() => {
+    if (!practiceReplaySession) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const session = consumePracticeReplay();
+      if (!session) {
+        setPracticeReplaySession(null);
+        return;
+      }
+
+      beginPracticeCase(session.caseId, session.focusIssueIds);
+      resetOfficeState();
+      setPracticeReplaySession(null);
+      setScene("office");
+    }, 500);
+
+    return () => window.clearTimeout(timer);
+  }, [beginPracticeCase, practiceReplaySession, resetOfficeState, setScene]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -130,7 +179,49 @@ export function MainMenuScene() {
             {selectedCase.deadlineDays} day sprint | {selectedCase.stakeholders.length} stakeholders |{" "}
             {selectedCase.issues.length} expected issues
           </p>
+          <div className="study-stat-grid">
+            <article className="study-stat">
+              <span className="metric-label">Runs</span>
+              <strong>{selectedCaseStudy.timesPlayed}</strong>
+            </article>
+            <article className="study-stat">
+              <span className="metric-label">Best Score</span>
+              <strong>{selectedCaseStudy.bestScore === null ? "—" : `${selectedCaseStudy.bestScore}/100`}</strong>
+            </article>
+            <article className="study-stat">
+              <span className="metric-label">Last Played</span>
+              <strong>{selectedCaseStudy.lastPlayedAt ? formatSavedAt(selectedCaseStudy.lastPlayedAt) : "Never"}</strong>
+            </article>
+            <article className="study-stat">
+              <span className="metric-label">Last Misses</span>
+              <strong>{selectedCaseStudy.lastMissedIssueIds.length}</strong>
+            </article>
+          </div>
+          {selectedCaseFocusLabels.length > 0 ? (
+            <section className="practice-focus-panel" aria-label="Practice focus">
+              <p className="eyebrow">Practice Focus</p>
+              <p className="scene-copy small">{selectedCaseFocusLabels.join(", ")}</p>
+              <button className="menu-button practice-button" onClick={startPracticeReplay}>
+                <span className="menu-indicator">&gt;</span>
+                <span>Practice Missed Issues</span>
+              </button>
+            </section>
+          ) : (
+            <p className="scene-copy small practice-empty">
+              Complete a run to unlock targeted replay for this case.
+            </p>
+          )}
         </section>
+        {practiceReplaySession ? (
+          <section className="practice-banner" aria-live="polite">
+            <p className="eyebrow">Practice Replay Queued</p>
+            <h2>{selectedCase.title}</h2>
+            <p className="scene-copy small">
+              Focus mode is reloading this case with {practiceReplaySession.focusIssueIds.length} missed issue
+              {practiceReplaySession.focusIssueIds.length === 1 ? "" : "s"} highlighted for review.
+            </p>
+          </section>
+        ) : null}
         <nav aria-label="Main menu">
           <ul className="menu-list">
             {menuItems.map((item, index) => {

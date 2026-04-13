@@ -5,6 +5,8 @@ import { useGameStore } from "../store/useGameStore";
 export function WorkstationScene() {
   const setScene = useGameStore((state) => state.setScene);
   const auditCase = useAuditStore((state) => state.auditCase);
+  const runMode = useAuditStore((state) => state.runMode);
+  const practiceFocusIssueIds = useAuditStore((state) => state.practiceFocusIssueIds);
   const selectedEvidenceId = useAuditStore((state) => state.selectedEvidenceId);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const discoveredEvidenceIds = useAuditStore((state) => state.discoveredEvidenceIds);
@@ -45,6 +47,10 @@ export function WorkstationScene() {
     { key: "findings", label: "Findings" },
   ] as const;
 
+  const practiceFocusIssues = auditCase.issues.filter((issue) =>
+    practiceFocusIssueIds.includes(issue.id),
+  );
+
   return (
     <section className="scene scene-workstation">
       <div className="scene-card workstation-card wide workstation-wide">
@@ -58,6 +64,26 @@ export function WorkstationScene() {
             <span>Reviewed: {reviewedEvidenceIds.length}/{visibleEvidence.length}</span>
           </div>
         </div>
+
+        {runMode === "practice" && (
+          <section className="terminal-panel practice-banner">
+            <p className="eyebrow">Practice Mode</p>
+            <h2>Retry Missed Control Areas</h2>
+            <p className="mail-body">
+              This replay is focused on the issues you missed last time. Start with the case file,
+              then trace the evidence and interviews tied to those control gaps.
+            </p>
+            {practiceFocusIssues.length > 0 && (
+              <ul className="bullet-list">
+                {practiceFocusIssues.map((issue) => (
+                  <li key={issue.id}>
+                    <strong>{issue.title}</strong> - {issue.severity}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         <div className="workstation-tabs" role="tablist" aria-label="Workstation navigation">
           {tabs.map((tab) => (
