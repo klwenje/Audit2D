@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import caseAccessManagement from "../data/case_access_management.json";
+import { auditCases, getAuditCase } from "../data/cases";
 import type { AuditCase, DraftFinding, Severity } from "../types/audit";
 import { scoreFindings, type ScoreBreakdown } from "../utils/scoring";
 
@@ -12,6 +12,8 @@ type FindingDraftForm = {
 };
 
 type AuditState = {
+  availableCases: AuditCase[];
+  selectedCaseId: string;
   auditCase: AuditCase;
   selectedEvidenceId: string;
   reviewedEvidenceIds: string[];
@@ -22,6 +24,8 @@ type AuditState = {
   findingDraftForm: FindingDraftForm;
   reportSubmitted: boolean;
   finalScore: ScoreBreakdown | null;
+  setSelectedCase: (caseId: string) => void;
+  beginSelectedCase: () => void;
   setWorkstationTab: (tab: AuditState["workstationTab"]) => void;
   selectEvidence: (evidenceId: string) => void;
   markEvidenceReviewed: (evidenceId: string) => void;
@@ -34,7 +38,6 @@ type AuditState = {
   resetAuditProgress: () => void;
 };
 
-const starterCase = caseAccessManagement as AuditCase;
 const defaultFindingDraftForm: FindingDraftForm = {
   title: "",
   description: "",
@@ -43,17 +46,45 @@ const defaultFindingDraftForm: FindingDraftForm = {
   linkedEvidenceIds: [],
 };
 
+function createCaseProgressState(auditCase: AuditCase) {
+  const initialEvidenceIds = auditCase.initialEvidenceIds;
+  const firstEvidenceId = initialEvidenceIds[0] ?? auditCase.evidence[0]?.id ?? "";
+
+  return {
+    auditCase,
+    selectedEvidenceId: firstEvidenceId,
+    reviewedEvidenceIds: [],
+    discoveredEvidenceIds: initialEvidenceIds,
+    interviewLogIds: [],
+    workstationTab: "inbox" as const,
+    draftedFindings: [],
+    findingDraftForm: defaultFindingDraftForm,
+    reportSubmitted: false,
+    finalScore: null,
+  };
+}
+
+const starterCase = auditCases[0];
+
 export const useAuditStore = create<AuditState>((set) => ({
-  auditCase: starterCase,
-  selectedEvidenceId: "ev-2",
-  reviewedEvidenceIds: [],
-  discoveredEvidenceIds: ["ev-2"],
-  interviewLogIds: [],
-  workstationTab: "inbox",
-  draftedFindings: [],
-  findingDraftForm: defaultFindingDraftForm,
-  reportSubmitted: false,
-  finalScore: null,
+  availableCases: auditCases,
+  selectedCaseId: starterCase.id,
+  ...createCaseProgressState(starterCase),
+  setSelectedCase: (caseId) =>
+    set((state) => {
+      if (state.selectedCaseId === caseId) {
+        return state;
+      }
+
+      return {
+        selectedCaseId: getAuditCase(caseId).id,
+      };
+    }),
+  beginSelectedCase: () =>
+    set((state) => {
+      const nextCase = getAuditCase(state.selectedCaseId);
+      return createCaseProgressState(nextCase);
+    }),
   setWorkstationTab: (tab) => set({ workstationTab: tab }),
   selectEvidence: (evidenceId) => set({ selectedEvidenceId: evidenceId }),
   markEvidenceReviewed: (evidenceId) =>
@@ -126,15 +157,5 @@ export const useAuditStore = create<AuditState>((set) => ({
       finalScore: scoreFindings(state.auditCase.issues, state.draftedFindings),
     })),
   resetAuditProgress: () =>
-    set({
-      selectedEvidenceId: "ev-2",
-      reviewedEvidenceIds: [],
-      discoveredEvidenceIds: ["ev-2"],
-      interviewLogIds: [],
-      workstationTab: "inbox",
-      draftedFindings: [],
-      findingDraftForm: defaultFindingDraftForm,
-      reportSubmitted: false,
-      finalScore: null,
-    }),
+    set((state) => createCaseProgressState(state.auditCase)),
 }));

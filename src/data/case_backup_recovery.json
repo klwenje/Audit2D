@@ -1,0 +1,220 @@
+{
+  "id": "case-backup-recovery",
+  "title": "Backup and Recovery Readiness Audit",
+  "summary": "Test whether backup monitoring, restore validation, retention, and production change controls are working well enough to support resilient recovery.",
+  "objective": "Assess whether backup operations, restore testing, retention management, and production change controls are designed and operating effectively for critical systems.",
+  "deadlineDays": 4,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Daily backup job monitoring",
+    "Monthly restore testing",
+    "Retention settings for finance data",
+    "Production database change governance"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Kelvin Tembo",
+      "role": "Infrastructure Lead",
+      "department": "Platform Operations"
+    },
+    {
+      "id": "st-2",
+      "name": "Lydia Chansa",
+      "role": "Database Administrator",
+      "department": "Enterprise Systems"
+    },
+    {
+      "id": "st-3",
+      "name": "Martha Siame",
+      "role": "Business Continuity Manager",
+      "department": "Risk and Resilience"
+    },
+    {
+      "id": "st-4",
+      "name": "Brian Sakala",
+      "role": "Finance Systems Owner",
+      "department": "Finance"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Daily Backup Failure Review",
+      "description": "Failed backup jobs should be reviewed, investigated, and resolved each business day.",
+      "framework": "ISO 27001 / A.8"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "Monthly Restore Test Execution",
+      "description": "Critical systems should undergo documented restore testing each month.",
+      "framework": "NIST CSF / RC.RP"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Retention for Financial Records",
+      "description": "Backup retention should align to the approved data retention schedule for regulated finance data.",
+      "framework": "COBIT / DSS04"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Approved Production Database Changes",
+      "description": "Changes affecting production backups and databases should have approval and post-change validation.",
+      "framework": "SOC 2 / Change Management"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Restore Test Calendar",
+      "type": "document",
+      "content": "The continuity calendar shows the March restore test for the ERP backup set was marked postponed and no replacement date was recorded.",
+      "relatedControls": ["ctrl-2"],
+      "tags": ["Restore Test", "BCP", "Schedule"]
+    },
+    {
+      "id": "ev-2",
+      "title": "Backup Monitoring Dashboard Export",
+      "type": "system",
+      "content": "Dashboard export dated April 5 shows repeated failures for the finance SQL backup job on April 2, 3, and 4 with status still open.",
+      "relatedControls": ["ctrl-1"],
+      "tags": ["Backup Jobs", "Monitoring", "SQL"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Retention Policy Screenshot",
+      "type": "screenshot",
+      "content": "Backup retention settings for the Falcon finance workload are configured for 14 days, while the approved schedule requires 90 days.",
+      "relatedControls": ["ctrl-3"],
+      "tags": ["Retention", "Finance", "Configuration"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Emergency Change Ticket",
+      "type": "document",
+      "content": "Emergency ticket CHG-2198 documents a production storage expansion but includes no evidence of post-change backup validation or manager approval.",
+      "relatedControls": ["ctrl-4"],
+      "tags": ["Change Management", "Emergency Change", "Approval"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Restore Test Result Sheet",
+      "type": "report",
+      "content": "The most recent completed restore test is from January and notes that the database restore failed because transaction logs were missing from the archive set.",
+      "relatedControls": ["ctrl-2", "ctrl-3"],
+      "tags": ["Restore Result", "Failure", "Archive Logs"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Backup Standard",
+      "type": "document",
+      "content": "The backup operations standard requires daily review of failed jobs, monthly restore tests, and retention aligned to business and legal requirements. The document was approved eight months ago.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Policy", "Standard", "Operations"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Unresolved Daily Backup Failures",
+      "description": "Critical finance backup failures remained open across multiple days without timely follow-up.",
+      "severity": "High",
+      "relatedEvidence": ["ev-2"],
+      "recommendation": "Implement same-day triage and escalation for failed critical backup jobs."
+    },
+    {
+      "id": "issue-2",
+      "title": "Missed Restore Test Cycle",
+      "description": "Required restore testing for a critical system was postponed and not completed within the monthly cycle.",
+      "severity": "High",
+      "relatedEvidence": ["ev-1", "ev-5"],
+      "recommendation": "Track restore testing with formal rescheduling and escalation for overdue tests."
+    },
+    {
+      "id": "issue-3",
+      "title": "Insufficient Backup Retention",
+      "description": "Finance backups were retained for a shorter period than the approved records schedule requires.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-3"],
+      "recommendation": "Align technical retention settings with the approved finance records schedule."
+    },
+    {
+      "id": "issue-4",
+      "title": "Emergency Change Missing Approval and Validation",
+      "description": "A production storage change lacked documented approval and backup validation evidence.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-4"],
+      "recommendation": "Require documented approval and post-change backup validation for emergency production changes."
+    },
+    {
+      "id": "issue-5",
+      "title": "Restore Failure Due to Missing Logs",
+      "description": "The latest completed restore test showed recovery could not be completed because required transaction logs were absent.",
+      "severity": "High",
+      "relatedEvidence": ["ev-5"],
+      "recommendation": "Review archive configuration and verify complete recoverability during each restore test."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "T. Mwape, Audit Manager",
+      "subject": "Kickoff: Backup and Recovery Readiness",
+      "preview": "Focus on whether backup jobs, restore tests, and retention settings would actually support recovery if production went down.",
+      "body": "This engagement is about operational reality, not just policy language. Use the evidence to determine whether critical systems can be recovered within expectations and whether failures are being acted on with enough discipline."
+    },
+    {
+      "id": "msg-2",
+      "from": "Kelvin Tembo",
+      "subject": "Requested backup extracts",
+      "preview": "Sharing the monitoring export and current standards for the backup environment.",
+      "body": "Attached are the latest dashboard export and the backup operations standard. We did have a noisy week because of storage work, but overall backup coverage should still be intact. Let me know if you want to walk through the exceptions."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "How are failed critical backup jobs followed up each day?",
+      "answer": "The team is supposed to review failures every morning, but repeated failures sometimes stay open if staff are tied up on infrastructure incidents."
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-1",
+      "question": "What happened during the recent storage expansion?",
+      "answer": "We processed it as an emergency change because capacity was close to full. We moved fast and did not complete the usual manager approval or after-action validation before closing the ticket.",
+      "revealsEvidenceIds": ["ev-4"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-2",
+      "question": "When was the last successful restore test for the finance database?",
+      "answer": "The last fully documented one was in January. March was deferred during quarter-end, and the January test still exposed gaps with the archived logs.",
+      "revealsEvidenceIds": ["ev-1", "ev-5"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-2",
+      "question": "Why is Falcon finance retention set to 14 days?",
+      "answer": "That workload inherited a default template during migration. We intended to extend it later, but the setting was never updated.",
+      "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-5",
+      "stakeholderId": "st-3",
+      "question": "What does the continuity team expect from monthly restore testing?",
+      "answer": "We expect evidence that one critical workload is restored every month and that failures are tracked to closure. We did not receive a March result pack."
+    },
+    {
+      "id": "ip-6",
+      "stakeholderId": "st-4",
+      "question": "Would 14 days of backup retention meet finance needs?",
+      "answer": "No. Finance records should be recoverable for much longer, especially during close and audit support periods.",
+      "revealsEvidenceIds": ["ev-3"]
+    }
+  ],
+  "closeout": {
+    "managementMessage": "The engagement indicates backup operations are documented, but day-to-day resilience is weaker than expected. Failure handling, restore execution, and retention alignment need tighter control if recovery expectations are to be credible.",
+    "auditorReflection": "Recovery audits reward operational skepticism. The strongest conclusions come from testing whether backups can actually be restored, not just whether dashboards look active."
+  }
+}

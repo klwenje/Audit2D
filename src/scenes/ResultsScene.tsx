@@ -132,18 +132,11 @@ export function ResultsScene() {
           <div className="report-closeout-grid">
             <div>
               <h3>Management Message</h3>
-              <p>
-                The engagement indicates that user access governance is partially designed but not operating
-                consistently. Offboarding, privileged access ownership, and periodic review controls require
-                stronger follow-through and clearer accountability.
-              </p>
+              <p>{auditCase.closeout.managementMessage}</p>
             </div>
             <div>
               <h3>Auditor Reflection</h3>
-              <p>
-                Stronger reports come from combining evidence, interviews, and disciplined severity judgment.
-                The final score reflects not just what you noticed, but how well you supported the case.
-              </p>
+              <p>{auditCase.closeout.auditorReflection}</p>
             </div>
           </div>
         </section>

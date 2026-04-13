@@ -61,8 +61,10 @@ export type InboxMessage = {
 export type AuditCase = {
   id: string;
   title: string;
+  summary: string;
   objective: string;
   deadlineDays: number;
+  initialEvidenceIds: string[];
   scope: string[];
   stakeholders: Stakeholder[];
   controls: Control[];
@@ -70,4 +72,8 @@ export type AuditCase = {
   issues: Issue[];
   inbox: InboxMessage[];
   interviewPrompts: InterviewPrompt[];
+  closeout: {
+    managementMessage: string;
+    auditorReflection: string;
+  };
 };

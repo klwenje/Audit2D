@@ -18,4 +18,5 @@ Added stakeholder interview prompts and an interview log.
 Used interview responses to unlock more evidence and reinforce fieldwork discovery.
 Improved the results screen with an executive summary, engagement metrics, and stronger closeout narrative.
 Added a printable-style final report sheet with browser print support.
-Next: consider a second audit case or light UI/audio polish.
+Added a second audit case and a main menu case picker so the sim now supports multiple engagements.
+Next: light UI/audio polish or basic save/continue support.

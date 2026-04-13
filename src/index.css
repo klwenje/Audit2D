@@ -123,6 +123,44 @@ h1 {
   gap: 0.7rem;
 }
 
+.case-select-card {
+  margin-top: 1.3rem;
+  padding: 1rem;
+  border: 2px solid #36536c;
+  background: rgba(9, 15, 22, 0.94);
+}
+
+.case-select-card h2 {
+  margin: 0;
+  color: #fff7bf;
+  font-size: clamp(1.2rem, 3vw, 1.7rem);
+}
+
+.case-select-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.case-select-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.case-switch-button {
+  min-width: 2.3rem;
+  min-height: 2.3rem;
+  border: 2px solid #3a5c78;
+  background: rgba(7, 14, 24, 0.88);
+  color: #d6e1f0;
+}
+
+.case-switch-button:hover {
+  border-color: #8ad3ff;
+  background: rgba(18, 35, 57, 0.95);
+}
+
 .menu-button {
   display: flex;
   align-items: center;

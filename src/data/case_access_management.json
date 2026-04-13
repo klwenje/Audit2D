@@ -1,8 +1,10 @@
 {
   "id": "case-access-management",
   "title": "User Access Management Audit",
+  "summary": "Assess whether offboarding, privileged access, quarterly review, and MFA controls are really operating in practice.",
   "objective": "Assess whether user access provisioning, deprovisioning, privileged access, and periodic access review controls are designed and operating effectively.",
   "deadlineDays": 5,
+  "initialEvidenceIds": ["ev-2"],
   "scope": [
     "Onboarding and offboarding",
     "Privileged access governance",
@@ -217,5 +219,9 @@
       "answer": "I should be reviewing Falcon access personally. For Q1, I reviewed the user list informally during budget close but did not sign the certification sheet.",
       "revealsEvidenceIds": ["ev-4"]
     }
-  ]
+  ],
+  "closeout": {
+    "managementMessage": "The engagement indicates that user access governance is partially designed but not operating consistently. Offboarding, privileged access ownership, and periodic review controls require stronger follow-through and clearer accountability.",
+    "auditorReflection": "Stronger reports come from combining evidence, interviews, and disciplined severity judgment. The final score reflects not just what you noticed, but how well you supported the case."
+  }
 }
