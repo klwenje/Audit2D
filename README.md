@@ -61,4 +61,12 @@ npm run dev
 
 ## Workflow
 
-We will build this in small, stable feature slices and commit after each meaningful milestone.
+We use a standing **3-track sprint** workflow for implementation rounds.
+
+- `Track 1`: learning systems, scoring, debrief, remediation flow
+- `Track 2`: content expansion, evidence ambiguity, and case variation
+- `Track 3`: progression, dossier/history, and game-shell UX
+
+Each round is grounded locally first, executed in parallel where ownership is clean, integrated in the main thread, then verified with `npm run build`.
+
+See [WORKFLOW.md](./WORKFLOW.md) for the full repo workflow.
