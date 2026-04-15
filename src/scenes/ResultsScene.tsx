@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
+import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
 import { clearSaveData } from "../utils/saveData";
 import { playBackTone, playConfirmTone } from "../utils/audio";
 import {
@@ -74,10 +75,12 @@ export function ResultsScene() {
   const availableCases = useAuditStore((state) => state.availableCases);
   const auditCase = useAuditStore((state) => state.auditCase);
   const finalScore = useAuditStore((state) => state.finalScore);
+  const runDifficulty = useAuditStore((state) => state.runDifficulty);
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pauseOpen, setPauseOpen] = useState(false);
   const didRecordRunRef = useRef<string | null>(null);
 
   const openHelpOverlay = () => {
@@ -90,21 +93,41 @@ export function ResultsScene() {
     setHelpOpen(false);
   };
 
+  const openPauseOverlay = () => {
+    playConfirmTone(sfxVolume);
+    setPauseOpen(true);
+  };
+
+  const closePauseOverlay = () => {
+    playBackTone(sfxVolume);
+    setPauseOpen(false);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (helpOpen) {
         return;
       }
 
+      if (pauseOpen) {
+        return;
+      }
+
       if (event.key.toLowerCase() === "h" || event.key === "?") {
         event.preventDefault();
         openHelpOverlay();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        openPauseOverlay();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [helpOpen, sfxVolume]);
+  }, [helpOpen, pauseOpen, sfxVolume]);
 
   useEffect(() => {
     if (!finalScore) {
@@ -224,13 +247,22 @@ export function ResultsScene() {
             <strong>{finalScore.score}/100</strong>
             <span>{rank}</span>
           </div>
-          <button
-            type="button"
-            className="panel-chip panel-chip-button help-chip"
-            onClick={openHelpOverlay}
-          >
-            Help: H
-          </button>
+          <div className="results-top-actions">
+            <button
+              type="button"
+              className="panel-chip panel-chip-button help-chip"
+              onClick={openPauseOverlay}
+            >
+              Pause: Esc
+            </button>
+            <button
+              type="button"
+              className="panel-chip panel-chip-button help-chip"
+              onClick={openHelpOverlay}
+            >
+              Help: H
+            </button>
+          </div>
         </div>
 
         <section className="terminal-panel report-summary-panel">
@@ -239,7 +271,7 @@ export function ResultsScene() {
               <p className="eyebrow">Executive Summary</p>
               <h2>{auditCase.title}</h2>
             </div>
-            <div className="report-chip">{rank}</div>
+            <div className="report-chip">{rank} | {runDifficulty}</div>
           </div>
 
           <p className="report-summary-copy">{narrative}</p>
@@ -554,7 +586,7 @@ export function ResultsScene() {
                 return;
               }
 
-              queuePracticeReplay(auditCase.id, finalScore.missedIssueIds);
+              queuePracticeReplay(auditCase.id, finalScore.missedIssueIds, runDifficulty);
               resetAuditProgress();
               resetOfficeState();
               setScene("mainMenu");
@@ -615,6 +647,21 @@ export function ResultsScene() {
               },
             ]}
             onClose={closeHelpOverlay}
+          />
+        )}
+
+        {pauseOpen && (
+          <ScenePauseOverlay
+            title="Report Review Paused"
+            intro="Pause the debrief, adjust your session settings, and jump back into the study review exactly where you left it."
+            resumeLabel="Resume Review"
+            secondaryActionLabel="Return to Main Menu"
+            secondaryActionHint="This exits the review shell and returns you to the main menu without clearing your current study progress."
+            onResume={closePauseOverlay}
+            onSecondaryAction={() => {
+              closePauseOverlay();
+              setScene("mainMenu");
+            }}
           />
         )}
       </div>

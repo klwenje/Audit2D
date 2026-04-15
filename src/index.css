@@ -778,6 +778,15 @@ h1 {
   min-width: 13rem;
 }
 
+.scene-settings-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.scene-settings-intro {
+  margin: 0;
+}
+
 .panel-chip-button {
   border: 1px solid rgba(138, 211, 255, 0.2);
   color: #a5d6ff;
@@ -809,6 +818,73 @@ h1 {
   color: #fff7bf;
   font-size: clamp(1.4rem, 3vw, 2.1rem);
   line-height: 1;
+}
+
+.scene-pause-backdrop {
+  background: rgba(2, 5, 9, 0.7);
+}
+
+.scene-pause-shell {
+  width: min(100%, 50rem);
+}
+
+.pause-shell-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.pause-shell-summary {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.pause-shell-summary h2 {
+  margin: 0;
+  color: #fff7bf;
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
+  line-height: 1;
+}
+
+.pause-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pause-status-strip span {
+  padding: 0.28rem 0.5rem;
+  border: 1px solid rgba(138, 211, 255, 0.18);
+  background: rgba(8, 15, 24, 0.82);
+  color: #a5d6ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+}
+
+.pause-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.pause-shell-settings {
+  min-width: 0;
+}
+
+.pause-settings-panel {
+  height: 100%;
+}
+
+.pause-hint {
+  margin: 0;
+}
+
+.results-top-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .help-grid {
@@ -1072,6 +1148,19 @@ h1 {
 .option-row select,
 .terminal-textarea {
   width: 100%;
+}
+
+@media (max-width: 900px) {
+  .pause-shell-grid,
+  .workstation-topbar,
+  .report-closeout-grid,
+  .report-sheet-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pause-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .terminal-textarea {

@@ -119,6 +119,14 @@
       "content": "The storage forecast shows backup capacity trending toward 72% utilization next quarter, with no backup job failures or restore exceptions tied to the projection itself.",
       "relatedControls": ["ctrl-1", "ctrl-2"],
       "tags": ["Capacity", "Forecast", "Operations"]
+    },
+    {
+      "id": "ev-8",
+      "title": "Restore Drill Chat Log",
+      "type": "document",
+      "content": "The storage maintenance chat mentions an informal restore drill completed by the DBA team, but the result was never posted to the official restore calendar or result sheet.",
+      "relatedControls": ["ctrl-2", "ctrl-4"],
+      "tags": ["Restore Drill", "Chat", "Informal"]
     }
   ],
   "issues": [
@@ -219,6 +227,13 @@
       "question": "Would 14 days of backup retention meet finance needs?",
       "answer": "No. Finance records should be recoverable for much longer, especially during close and audit support periods.",
       "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-7",
+      "stakeholderId": "st-2",
+      "question": "Did the team ever run an alternate restore drill during the storage freeze?",
+      "answer": "We did a quick informal restore during maintenance, but it was not the scheduled monthly test and nobody posted the result to the official tracking pack.",
+      "revealsEvidenceIds": ["ev-8"]
     }
   ],
   "closeout": {

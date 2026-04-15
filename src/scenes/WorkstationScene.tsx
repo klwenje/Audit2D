@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
+import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
 import { playBackTone, playConfirmTone } from "../utils/audio";
 
 function getEvidenceArtifactLabel(type: string) {
@@ -39,6 +40,7 @@ export function WorkstationScene() {
   const removeDraftFinding = useAuditStore((state) => state.removeDraftFinding);
   const submitReport = useAuditStore((state) => state.submitReport);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pauseOpen, setPauseOpen] = useState(false);
 
   const openHelpOverlay = () => {
     playConfirmTone(sfxVolume);
@@ -50,9 +52,23 @@ export function WorkstationScene() {
     setHelpOpen(false);
   };
 
+  const openPauseOverlay = () => {
+    playConfirmTone(sfxVolume);
+    setPauseOpen(true);
+  };
+
+  const closePauseOverlay = () => {
+    playBackTone(sfxVolume);
+    setPauseOpen(false);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (helpOpen) {
+        return;
+      }
+
+      if (pauseOpen) {
         return;
       }
 
@@ -72,12 +88,18 @@ export function WorkstationScene() {
       if (event.key.toLowerCase() === "h" || event.key === "?") {
         event.preventDefault();
         openHelpOverlay();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        openPauseOverlay();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [helpOpen, sfxVolume]);
+  }, [helpOpen, pauseOpen, sfxVolume]);
 
   const selectedEvidence = useMemo(
     () =>
@@ -129,6 +151,9 @@ export function WorkstationScene() {
             <span>Deadline: {auditCase.deadlineDays} days</span>
             <span>Reviewed: {reviewedCount}/{visibleEvidence.length}</span>
             <span>Interviews: {askedInterviewCount}/{auditCase.interviewPrompts.length}</span>
+            <button type="button" className="panel-chip panel-chip-button" onClick={openPauseOverlay}>
+              Pause: Esc
+            </button>
             <button type="button" className="panel-chip panel-chip-button" onClick={openHelpOverlay}>
               Help: H
             </button>
@@ -598,6 +623,21 @@ export function WorkstationScene() {
               },
             ]}
             onClose={closeHelpOverlay}
+          />
+        )}
+
+        {pauseOpen && (
+          <ScenePauseOverlay
+            title="Desk Terminal Paused"
+            intro="Freeze the audit shell, change your session settings, and return to the same evidence trail when you are ready."
+            resumeLabel="Resume Terminal"
+            secondaryActionLabel="Leave Computer"
+            secondaryActionHint="Leaving the workstation returns you to the office floor without clearing your case progress."
+            onResume={closePauseOverlay}
+            onSecondaryAction={() => {
+              closePauseOverlay();
+              setScene("office");
+            }}
           />
         )}
       </div>

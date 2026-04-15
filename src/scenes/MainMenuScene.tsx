@@ -8,6 +8,7 @@ import {
   type CaseFamilyFilter,
   type CaseSortMode,
 } from "../utils/caseCatalog";
+import { runDifficultyOptions, type RunDifficulty } from "../utils/runDifficulty";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { playConfirmTone, playNavigateTone } from "../utils/audio";
@@ -57,6 +58,7 @@ export function MainMenuScene() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [familyFilter, setFamilyFilter] = useState<CaseFamilyFilter>("all");
   const [caseSortMode, setCaseSortMode] = useState<CaseSortMode>("recommended");
+  const [selectedRunDifficulty, setSelectedRunDifficulty] = useState<RunDifficulty>("normal");
   const [practiceReplaySession, setPracticeReplaySession] = useState(() => loadPracticeReplay());
   const [menuAlert, setMenuAlert] = useState<MenuAlertState>(null);
   const saveData = loadSaveData();
@@ -114,12 +116,14 @@ export function MainMenuScene() {
       ? "All families"
       : caseFamilyOptions.find((option) => option.id === familyFilter)?.label ?? "Filtered";
   const sortCountLabel = caseSortOptions.find((option) => option.id === caseSortMode)?.label ?? "Recommended";
+  const selectedRunDifficultyOption =
+    runDifficultyOptions.find((option) => option.id === selectedRunDifficulty) ?? runDifficultyOptions[1];
 
   const startNewGame = () => {
     setMenuAlert(null);
     clearPracticeReplay();
     setPracticeReplaySession(null);
-    beginSelectedCase();
+    beginSelectedCase(selectedRunDifficulty);
     resetOfficeState();
     setScene("office");
   };
@@ -129,7 +133,7 @@ export function MainMenuScene() {
       return;
     }
 
-    queuePracticeReplay(selectedCase.id, selectedCaseStudy.lastMissedIssueIds);
+    queuePracticeReplay(selectedCase.id, selectedCaseStudy.lastMissedIssueIds, selectedRunDifficulty);
     setPracticeReplaySession(loadPracticeReplay());
   };
 
@@ -184,7 +188,7 @@ export function MainMenuScene() {
         return;
       }
 
-      beginPracticeCase(session.caseId, session.focusIssueIds);
+      beginPracticeCase(session.caseId, session.focusIssueIds, session.runDifficulty);
       resetOfficeState();
       setPracticeReplaySession(null);
       setScene("office");
@@ -366,12 +370,37 @@ export function MainMenuScene() {
                 })}
               </div>
             </div>
+            <div className="catalog-control-group">
+              <p className="metric-label">Run Difficulty</p>
+              <div className="catalog-chip-row" role="toolbar" aria-label="Run difficulty selection">
+                {runDifficultyOptions.map((option) => {
+                  const isSelected = selectedRunDifficulty === option.id;
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`catalog-chip ${isSelected ? "selected" : ""}`}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        playNavigateTone(sfxVolume);
+                        setSelectedRunDifficulty(option.id);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="scene-copy small">{selectedRunDifficultyOption.description}</p>
+            </div>
           </div>
           <div className="case-meta-strip">
             <span className="panel-chip">{selectedCase.familyLabel}</span>
             <span className="panel-chip">{selectedCase.difficultyLabel}</span>
             <span className="panel-chip">{sortCountLabel}</span>
             <span className="panel-chip">{familyCountLabel}</span>
+            <span className="panel-chip">Run {selectedRunDifficultyOption.label}</span>
           </div>
           <h2>{selectedCase.title}</h2>
           <p className="scene-copy small">{selectedCase.summary}</p>
@@ -418,7 +447,9 @@ export function MainMenuScene() {
             <h2>{selectedCase.title}</h2>
             <p className="scene-copy small">
               Focus mode is reloading this case with {practiceReplaySession.focusIssueIds.length} missed issue
-              {practiceReplaySession.focusIssueIds.length === 1 ? "" : "s"} highlighted for review.
+              {practiceReplaySession.focusIssueIds.length === 1 ? "" : "s"} highlighted for review on{" "}
+              {runDifficultyOptions.find((option) => option.id === practiceReplaySession.runDifficulty)?.label ??
+                "Normal"}.
             </p>
           </section>
         ) : null}
@@ -461,7 +492,7 @@ export function MainMenuScene() {
           </ul>
         </nav>
         <p className="scene-copy small">
-          Use Arrow Keys and Enter. Left and Right switch visible case files. Filter by family and difficulty above.
+          Use Arrow Keys and Enter. Left and Right switch visible case files. Filter by family and sort above, and choose run difficulty to change starting evidence.
         </p>
         <p className="scene-copy small menu-save-label">
           {hasSaveData ? `Last saved: ${lastSavedLabel}` : lastSavedLabel}

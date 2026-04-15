@@ -119,6 +119,14 @@
       "content": "The weekly on-call roster shows primary and secondary coverage for security operations across the month, with no open shift gaps or unassigned standby periods.",
       "relatedControls": ["ctrl-1", "ctrl-2"],
       "tags": ["Roster", "Coverage", "On-Call"]
+    },
+    {
+      "id": "ev-8",
+      "title": "Executive Status Email",
+      "type": "document",
+      "content": "A status email sent to leadership says the phishing event was being handled as a major incident, but the incident register and bridge log were never updated to match that statement.",
+      "relatedControls": ["ctrl-2", "ctrl-4"],
+      "tags": ["Executive Update", "Escalation", "Status"]
     }
   ],
   "issues": [
@@ -205,6 +213,13 @@
       "stakeholderId": "st-4",
       "question": "What was service desk told during the event?",
       "answer": "Support was told to watch for mailbox complaints, but no formal major incident bridge was opened, so communication stayed informal."
+    },
+    {
+      "id": "ip-6",
+      "stakeholderId": "st-3",
+      "question": "Did leadership receive a major-incident update for the phishing event?",
+      "answer": "They received a status note that made it sound like one, but the formal register entry never happened and the bridge log stayed empty.",
+      "revealsEvidenceIds": ["ev-8"]
     }
   ],
   "closeout": {

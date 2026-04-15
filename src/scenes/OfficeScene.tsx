@@ -5,6 +5,7 @@ import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { playBackTone, playConfirmTone } from "../utils/audio";
 import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
+import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
 
 export function OfficeScene() {
   const setScene = useGameStore((state) => state.setScene);
@@ -13,6 +14,7 @@ export function OfficeScene() {
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const auditCase = useAuditStore((state) => state.auditCase);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pauseOpen, setPauseOpen] = useState(false);
 
   const canUseDesk = useMemo(
     () =>
@@ -38,9 +40,23 @@ export function OfficeScene() {
     setHelpOpen(false);
   };
 
+  const openPauseOverlay = () => {
+    playConfirmTone(sfxVolume);
+    setPauseOpen(true);
+  };
+
+  const closePauseOverlay = () => {
+    playBackTone(sfxVolume);
+    setPauseOpen(false);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (helpOpen) {
+        return;
+      }
+
+      if (pauseOpen) {
         return;
       }
 
@@ -50,21 +66,21 @@ export function OfficeScene() {
         return;
       }
 
+      if (event.key === "Escape") {
+        event.preventDefault();
+        openPauseOverlay();
+        return;
+      }
+
       if (event.key.toLowerCase() === "e" && canUseDesk) {
         playConfirmTone(sfxVolume);
         setScene("workstation");
-      }
-
-      if (event.key === "Escape") {
-        playBackTone(sfxVolume);
-        setScene("mainMenu");
-        resetOfficeState();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canUseDesk, helpOpen, resetOfficeState, setScene, sfxVolume]);
+  }, [canUseDesk, helpOpen, pauseOpen, setScene, sfxVolume]);
 
   return (
     <section className="scene scene-office">
@@ -82,7 +98,9 @@ export function OfficeScene() {
           <div className="office-status">
             <span>Move: WASD / Arrows</span>
             <span>Use desk: E</span>
-            <span>Menu: Esc</span>
+            <button type="button" className="panel-chip panel-chip-button" onClick={openPauseOverlay}>
+              Pause: Esc
+            </button>
             <button type="button" className="panel-chip panel-chip-button" onClick={openHelpOverlay}>
               Help: H
             </button>
@@ -119,6 +137,22 @@ export function OfficeScene() {
           onClose={closeHelpOverlay}
         />
       )}
+
+        {pauseOpen && (
+          <ScenePauseOverlay
+            title="Office Floor Paused"
+            intro="You can adjust your session settings, then jump back into the fieldwork loop without leaving the simulation."
+            resumeLabel="Resume Office"
+            secondaryActionLabel="Return to Menu"
+            secondaryActionHint="Leaving the office will reset your floor position and send you back to the main menu."
+            onResume={closePauseOverlay}
+            onSecondaryAction={() => {
+              closePauseOverlay();
+              resetOfficeState();
+              setScene("mainMenu");
+            }}
+          />
+        )}
     </section>
   );
 }

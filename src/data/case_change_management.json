@@ -119,6 +119,14 @@
       "content": "The quarterly release calendar shows three planned maintenance windows and two feature-freeze dates, all assigned to routine windows without exceptions.",
       "relatedControls": ["ctrl-1", "ctrl-2"],
       "tags": ["Calendar", "Planning", "Release"]
+    },
+    {
+      "id": "ev-8",
+      "title": "CAB Follow-Up Thread",
+      "type": "document",
+      "content": "A follow-up thread says the emergency billing fix was 'approved in chat' after deployment, but no CAB record, ticket reference, or testing attachment was added to the release record.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-4"],
+      "tags": ["CAB", "Chat Approval", "Follow-Up"]
     }
   ],
   "issues": [
@@ -206,6 +214,13 @@
       "question": "Was a postmortem completed after the payment outage rollback?",
       "answer": "Operations captured the outage notes, but the formal post-incident review never happened because the team moved to the next release cycle.",
       "revealsEvidenceIds": ["ev-5"]
+    },
+    {
+      "id": "ip-6",
+      "stakeholderId": "st-2",
+      "question": "Did the billing fix have testing evidence before release?",
+      "answer": "The team said the staging checks passed, but the only proof I saw was a chat update and a screenshot that arrived after the deployment window started.",
+      "revealsEvidenceIds": ["ev-2", "ev-8"]
     }
   ],
   "closeout": {

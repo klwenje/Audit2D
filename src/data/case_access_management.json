@@ -119,6 +119,14 @@
       "content": "The monthly metrics rollup shows 91 terminations processed, 14 new privileged requests, and 98% MFA coverage for standard users. No exceptions were flagged in the summary.",
       "relatedControls": ["ctrl-1", "ctrl-3"],
       "tags": ["Dashboard", "Metrics", "Routine"]
+    },
+    {
+      "id": "ev-8",
+      "title": "Offboarding Closure Note",
+      "type": "document",
+      "content": "The service desk closure note says John Doe's primary account was disabled on March 1 at 17:12, but the note also warns that VPN and directory-group refreshes can lag until the next sync cycle.",
+      "relatedControls": ["ctrl-1"],
+      "tags": ["Offboarding", "Closure", "Sync Lag"]
     }
   ],
   "issues": [
@@ -226,6 +234,13 @@
       "question": "Who signs off Falcon finance access each quarter?",
       "answer": "I should be reviewing Falcon access personally. For Q1, I reviewed the user list informally during budget close but did not sign the certification sheet.",
       "revealsEvidenceIds": ["ev-4"]
+    },
+    {
+      "id": "ip-8",
+      "stakeholderId": "st-1",
+      "question": "Was John Doe fully deprovisioned on March 1?",
+      "answer": "The closure note shows the primary account was disabled that day, but I cannot guarantee every downstream group refreshed at the same moment. Some exports can lag behind the actual disablement.",
+      "revealsEvidenceIds": ["ev-8"]
     }
   ],
   "closeout": {

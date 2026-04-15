@@ -1,3 +1,5 @@
+import { normalizeRunDifficulty, type RunDifficulty } from "./runDifficulty";
+
 const STUDY_PROGRESS_KEY = "audit-desk-retro-study-progress-v1";
 const PRACTICE_REPLAY_KEY = "audit-desk-retro-practice-replay-v1";
 
@@ -38,6 +40,7 @@ type StudyProgressStore = {
 export type PracticeReplaySession = {
   caseId: string;
   focusIssueIds: string[];
+  runDifficulty: RunDifficulty;
   queuedAt: string;
 };
 
@@ -107,6 +110,7 @@ function loadPracticeReplayStore(): PracticeReplaySession | null {
     return {
       caseId: parsed.caseId,
       focusIssueIds: normalizeIssueIds(parsed.focusIssueIds),
+      runDifficulty: normalizeRunDifficulty(parsed.runDifficulty),
       queuedAt: parsed.queuedAt,
     };
   } catch {
@@ -224,7 +228,11 @@ export function recordCaseStudyRun(caseId: string, score: number, missedIssueIds
   writeStudyProgressStore(store);
 }
 
-export function queuePracticeReplay(caseId: string, focusIssueIds: string[]) {
+export function queuePracticeReplay(
+  caseId: string,
+  focusIssueIds: string[],
+  runDifficulty: RunDifficulty = "normal",
+) {
   if (typeof window === "undefined") {
     return;
   }
@@ -232,6 +240,7 @@ export function queuePracticeReplay(caseId: string, focusIssueIds: string[]) {
   const session: PracticeReplaySession = {
     caseId,
     focusIssueIds: normalizeIssueIds(focusIssueIds),
+    runDifficulty,
     queuedAt: new Date().toISOString(),
   };
 
