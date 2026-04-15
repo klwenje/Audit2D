@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { clearSaveData } from "../utils/saveData";
 import {
   clearPracticeReplay,
   getCaseMasteryStats,
+  getStudyMomentumSummary,
   queuePracticeReplay,
   recordCaseStudyRun,
 } from "../utils/studyProgress";
@@ -67,6 +68,7 @@ function getNextStepAdvice(score: number, missedCount: number, unsupportedCount:
 export function ResultsScene() {
   const setScene = useGameStore((state) => state.setScene);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
+  const availableCases = useAuditStore((state) => state.availableCases);
   const auditCase = useAuditStore((state) => state.auditCase);
   const finalScore = useAuditStore((state) => state.finalScore);
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
@@ -128,6 +130,42 @@ export function ResultsScene() {
   const projectedRuns = caseMastery.timesPlayed + 1;
   const projectedBestScore =
     caseMastery.bestScore === null ? finalScore.score : Math.max(caseMastery.bestScore, finalScore.score);
+  const studyMomentum = useMemo(
+    () =>
+      getStudyMomentumSummary(
+        availableCases.map((auditCaseEntry) => auditCaseEntry.id),
+        {
+          caseId: auditCase.id,
+          score: finalScore.score,
+          missedIssueIds: finalScore.missedIssueIds,
+        },
+      ),
+    [auditCase.id, availableCases, finalScore.missedIssueIds, finalScore.score],
+  );
+  const strongestCaseLabel = useMemo(() => {
+    const strongestCase = studyMomentum.strongestCase;
+    if (!strongestCase) {
+      return "No scored case yet";
+    }
+
+    return (
+      availableCases.find((auditCaseEntry) => auditCaseEntry.id === strongestCase.caseId)?.title ??
+      strongestCase.caseId
+    );
+  }, [availableCases, studyMomentum.strongestCase]);
+  const mostReplayedCaseLabel = useMemo(() => {
+    const mostReplayedCase = studyMomentum.mostReplayedCase;
+    if (!mostReplayedCase) {
+      return "No replay loop yet";
+    }
+
+    return (
+      availableCases.find((auditCaseEntry) => auditCaseEntry.id === mostReplayedCase.caseId)?.title ??
+      mostReplayedCase.caseId
+    );
+  }, [availableCases, studyMomentum.mostReplayedCase]);
+  const averageBestScoreLabel =
+    studyMomentum.averageBestScore === null ? "—" : `${studyMomentum.averageBestScore}/100`;
   const controlCoverage = auditCase.controls.map((control) => {
     const relatedIssues = auditCase.issues.filter((issue) =>
       issue.relatedEvidence.some((evidenceId) =>
@@ -257,6 +295,49 @@ export function ResultsScene() {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="terminal-panel progress-summary-panel results-progress-panel">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Progression Summary</p>
+              <h2>Overall Study Momentum</h2>
+            </div>
+            <div className="panel-chip">
+              {studyMomentum.casesTouched}/{studyMomentum.totalCases} Cases Touched
+            </div>
+          </div>
+          <p className="report-summary-copy">
+            This run updates your cross-case progress to {studyMomentum.totalRuns} total runs across{" "}
+            {studyMomentum.casesTouched} active cases, with {averageBestScoreLabel} average best score and{" "}
+            {studyMomentum.replayReadyCases} replay-ready cases.
+          </p>
+          <div className="progress-summary-grid">
+            <article className="progress-summary-card">
+              <span className="metric-label">Cases Touched</span>
+              <strong>
+                {studyMomentum.casesTouched}/{studyMomentum.totalCases}
+              </strong>
+            </article>
+            <article className="progress-summary-card">
+              <span className="metric-label">Total Runs</span>
+              <strong>{studyMomentum.totalRuns}</strong>
+            </article>
+            <article className="progress-summary-card">
+              <span className="metric-label">Avg Best</span>
+              <strong>{averageBestScoreLabel}</strong>
+            </article>
+            <article className="progress-summary-card">
+              <span className="metric-label">Replay Ready</span>
+              <strong>{studyMomentum.replayReadyCases}</strong>
+            </article>
+          </div>
+          <p className="scene-copy small progress-summary-footer">
+            Strongest case: {strongestCaseLabel}
+            {studyMomentum.strongestCase ? ` (${studyMomentum.strongestCase.bestScore}/100)` : ""}. Most replayed:{" "}
+            {mostReplayedCaseLabel}
+            {studyMomentum.mostReplayedCase ? ` (${studyMomentum.mostReplayedCase.timesPlayed} runs)` : ""}.
+          </p>
         </section>
 
         <section className="report-sheet" aria-label="Printable audit report">

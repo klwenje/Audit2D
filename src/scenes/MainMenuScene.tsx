@@ -7,11 +7,21 @@ import {
   clearPracticeReplay,
   consumePracticeReplay,
   getCaseMasteryStats,
+  getStudyMomentumSummary,
   loadPracticeReplay,
   queuePracticeReplay,
 } from "../utils/studyProgress";
+import { SceneModal } from "../components/SceneModal";
 
 const menuItems = ["New Game", "Continue", "Options", "Credits"] as const;
+
+type MenuAlertState =
+  | {
+      title: string;
+      body: string;
+      actionLabel: string;
+    }
+  | null;
 
 function formatSavedAt(value: string) {
   const date = new Date(value);
@@ -37,6 +47,7 @@ export function MainMenuScene() {
   const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [practiceReplaySession, setPracticeReplaySession] = useState(() => loadPracticeReplay());
+  const [menuAlert, setMenuAlert] = useState<MenuAlertState>(null);
   const saveData = loadSaveData();
   const continueScene = saveData?.scene && saveData.scene !== "splash" ? saveData.scene : "office";
   const hasSaveData = Boolean(saveData);
@@ -48,6 +59,10 @@ export function MainMenuScene() {
     [availableCases, selectedCaseId],
   );
   const selectedCase = availableCases[selectedCaseIndex] ?? availableCases[0];
+  const studyMomentum = useMemo(
+    () => getStudyMomentumSummary(availableCases.map((auditCase) => auditCase.id)),
+    [availableCases],
+  );
   const selectedCaseStudy = useMemo(() => getCaseMasteryStats(selectedCase.id), [selectedCase.id]);
   const selectedCaseFocusLabels = useMemo(
     () =>
@@ -56,8 +71,31 @@ export function MainMenuScene() {
         .filter(Boolean),
     [selectedCase, selectedCaseStudy.lastMissedIssueIds],
   );
+  const strongestCaseLabel = useMemo(() => {
+    const strongestCase = studyMomentum.strongestCase;
+    if (!strongestCase) {
+      return "No scored case yet";
+    }
+
+    return (
+      availableCases.find((auditCase) => auditCase.id === strongestCase.caseId)?.title ?? strongestCase.caseId
+    );
+  }, [availableCases, studyMomentum.strongestCase]);
+  const mostReplayedCaseLabel = useMemo(() => {
+    const mostReplayedCase = studyMomentum.mostReplayedCase;
+    if (!mostReplayedCase) {
+      return "No replay loop yet";
+    }
+
+    return (
+      availableCases.find((auditCase) => auditCase.id === mostReplayedCase.caseId)?.title ?? mostReplayedCase.caseId
+    );
+  }, [availableCases, studyMomentum.mostReplayedCase]);
+  const averageBestScoreLabel =
+    studyMomentum.averageBestScore === null ? "—" : `${studyMomentum.averageBestScore}/100`;
 
   const startNewGame = () => {
+    setMenuAlert(null);
     clearPracticeReplay();
     setPracticeReplaySession(null);
     beginSelectedCase();
@@ -72,6 +110,26 @@ export function MainMenuScene() {
 
     queuePracticeReplay(selectedCase.id, selectedCaseStudy.lastMissedIssueIds);
     setPracticeReplaySession(loadPracticeReplay());
+  };
+
+  const openCredits = () => {
+    setMenuAlert({
+      title: "Audit Desk Retro",
+      body: "Designed as a lightweight indie-style audit simulator for training judgment, evidence review, and control testing.",
+      actionLabel: "Close File",
+    });
+  };
+
+  const openNoSaveNotice = () => {
+    setMenuAlert({
+      title: "No Save Data Found",
+      body: "Start a run first, then Continue will resume the last active audit session from disk.",
+      actionLabel: "Understood",
+    });
+  };
+
+  const closeMenuAlert = () => {
+    setMenuAlert(null);
   };
 
   const cycleCase = (direction: -1 | 1) => {
@@ -102,6 +160,15 @@ export function MainMenuScene() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (menuAlert) {
+        if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          closeMenuAlert();
+        }
+
+        return;
+      }
+
       if (event.key === "ArrowUp") {
         playNavigateTone(sfxVolume);
         setSelectedIndex((current) => (current - 1 + menuItems.length) % menuItems.length);
@@ -121,9 +188,9 @@ export function MainMenuScene() {
         } else if (selectedLabel === "Continue" && hasSaveData) {
           setScene(continueScene);
         } else if (selectedLabel === "Credits") {
-          window.alert("Audit Desk Retro\nDesigned as a lightweight indie-style audit simulator.");
+          openCredits();
         } else {
-          window.alert("No save data found yet. Start a run first, then Continue will resume it.");
+          openNoSaveNotice();
         }
       }
 
@@ -140,13 +207,54 @@ export function MainMenuScene() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [continueScene, cycleCase, hasSaveData, selectedLabel, setScene, sfxVolume, startNewGame]);
+  }, [continueScene, cycleCase, hasSaveData, menuAlert, selectedLabel, setScene, sfxVolume, startNewGame]);
 
   return (
     <section className="scene scene-menu">
       <div className="scene-card menu-card">
         <p className="eyebrow">Case File Zero</p>
         <h1>MAIN MENU</h1>
+        <section className="progress-summary-panel" aria-label="Study momentum summary">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Progression Summary</p>
+              <h2>Study Momentum</h2>
+            </div>
+            <div className="panel-chip">
+              {studyMomentum.casesTouched}/{studyMomentum.totalCases} Cases Touched
+            </div>
+          </div>
+          <p className="scene-copy small">
+            {studyMomentum.totalRuns} total runs, {averageBestScoreLabel} average best score, and{" "}
+            {studyMomentum.replayReadyCases} cases ready for targeted replay.
+          </p>
+          <div className="progress-summary-grid">
+            <article className="progress-summary-card">
+              <span className="metric-label">Cases Touched</span>
+              <strong>
+                {studyMomentum.casesTouched}/{studyMomentum.totalCases}
+              </strong>
+            </article>
+            <article className="progress-summary-card">
+              <span className="metric-label">Total Runs</span>
+              <strong>{studyMomentum.totalRuns}</strong>
+            </article>
+            <article className="progress-summary-card">
+              <span className="metric-label">Avg Best</span>
+              <strong>{averageBestScoreLabel}</strong>
+            </article>
+            <article className="progress-summary-card">
+              <span className="metric-label">Replay Ready</span>
+              <strong>{studyMomentum.replayReadyCases}</strong>
+            </article>
+          </div>
+          <p className="scene-copy small progress-summary-footer">
+            Strongest case: {strongestCaseLabel}
+            {studyMomentum.strongestCase ? ` (${studyMomentum.strongestCase.bestScore}/100)` : ""}. Most replayed:{" "}
+            {mostReplayedCaseLabel}
+            {studyMomentum.mostReplayedCase ? ` (${studyMomentum.mostReplayedCase.timesPlayed} runs)` : ""}.
+          </p>
+        </section>
         <section className="case-select-card" aria-label="Case selection">
           <div className="case-select-header">
             <p className="eyebrow">Selected Engagement</p>
@@ -246,9 +354,9 @@ export function MainMenuScene() {
                       } else if (item === "Continue" && hasSaveData) {
                         setScene(continueScene);
                       } else if (item === "Credits") {
-                        window.alert("Audit Desk Retro\nDesigned as a lightweight indie-style audit simulator.");
+                        openCredits();
                       } else {
-                        window.alert("No save data found yet. Start a run first, then Continue will resume it.");
+                        openNoSaveNotice();
                       }
                     }}
                   >
@@ -267,6 +375,14 @@ export function MainMenuScene() {
           {hasSaveData ? `Last saved: ${lastSavedLabel}` : lastSavedLabel}
         </p>
       </div>
+      {menuAlert ? (
+        <SceneModal
+          title={menuAlert.title}
+          body={menuAlert.body}
+          actionLabel={menuAlert.actionLabel}
+          onClose={closeMenuAlert}
+        />
+      ) : null}
     </section>
   );
 }

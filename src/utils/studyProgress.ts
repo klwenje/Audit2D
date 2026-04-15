@@ -8,6 +8,28 @@ export type CaseMasteryStats = {
   lastMissedIssueIds: string[];
 };
 
+export type StudyMomentumSummary = {
+  totalCases: number;
+  casesTouched: number;
+  totalRuns: number;
+  averageBestScore: number | null;
+  replayReadyCases: number;
+  strongestCase: {
+    caseId: string;
+    bestScore: number;
+  } | null;
+  mostReplayedCase: {
+    caseId: string;
+    timesPlayed: number;
+  } | null;
+};
+
+export type ProjectedStudyRun = {
+  caseId: string;
+  score: number;
+  missedIssueIds: string[];
+};
+
 type StudyProgressStore = {
   version: 1;
   cases: Record<string, CaseMasteryStats>;
@@ -95,6 +117,89 @@ function loadPracticeReplayStore(): PracticeReplaySession | null {
 export function getCaseMasteryStats(caseId: string): CaseMasteryStats {
   const store = loadStudyProgressStore();
   return store.cases[caseId] ?? createDefaultCaseMasteryStats();
+}
+
+export function getStudyMomentumSummary(
+  caseIds: string[],
+  projectedRun?: ProjectedStudyRun,
+): StudyMomentumSummary {
+  const store = loadStudyProgressStore();
+  const caseStats = caseIds.map((caseId) => ({
+    caseId,
+    stats: store.cases[caseId] ?? createDefaultCaseMasteryStats(),
+  }));
+
+  if (projectedRun) {
+    const projectedIndex = caseStats.findIndex(({ caseId }) => caseId === projectedRun.caseId);
+    if (projectedIndex >= 0) {
+      const currentStats = caseStats[projectedIndex].stats;
+      const normalizedScore = Number.isFinite(projectedRun.score)
+        ? Math.max(0, Math.round(projectedRun.score))
+        : 0;
+
+      caseStats[projectedIndex] = {
+        caseId: projectedRun.caseId,
+        stats: {
+          bestScore:
+            currentStats.bestScore === null
+              ? normalizedScore
+              : Math.max(currentStats.bestScore, normalizedScore),
+          timesPlayed: currentStats.timesPlayed + 1,
+          lastPlayedAt: new Date().toISOString(),
+          lastMissedIssueIds: normalizeIssueIds(projectedRun.missedIssueIds),
+        },
+      };
+    }
+  }
+
+  const touchedCases = caseStats.filter(({ stats }) => stats.timesPlayed > 0);
+  const totalRuns = caseStats.reduce((sum, { stats }) => sum + stats.timesPlayed, 0);
+  const bestScores = touchedCases
+    .map(({ stats }) => stats.bestScore)
+    .filter((score): score is number => typeof score === "number");
+
+  const strongestCase = caseStats.reduce<StudyMomentumSummary["strongestCase"]>((currentBest, entry) => {
+    if (entry.stats.bestScore === null) {
+      return currentBest;
+    }
+
+    if (!currentBest || entry.stats.bestScore > currentBest.bestScore) {
+      return {
+        caseId: entry.caseId,
+        bestScore: entry.stats.bestScore,
+      };
+    }
+
+    return currentBest;
+  }, null);
+
+  const mostReplayedCase = caseStats.reduce<StudyMomentumSummary["mostReplayedCase"]>((currentMost, entry) => {
+    if (entry.stats.timesPlayed === 0) {
+      return currentMost;
+    }
+
+    if (!currentMost || entry.stats.timesPlayed > currentMost.timesPlayed) {
+      return {
+        caseId: entry.caseId,
+        timesPlayed: entry.stats.timesPlayed,
+      };
+    }
+
+    return currentMost;
+  }, null);
+
+  return {
+    totalCases: caseIds.length,
+    casesTouched: touchedCases.length,
+    totalRuns,
+    averageBestScore:
+      bestScores.length > 0
+        ? Math.round(bestScores.reduce((sum, score) => sum + score, 0) / bestScores.length)
+        : null,
+    replayReadyCases: caseStats.filter(({ stats }) => stats.lastMissedIssueIds.length > 0).length,
+    strongestCase,
+    mostReplayedCase,
+  };
 }
 
 export function recordCaseStudyRun(caseId: string, score: number, missedIssueIds: string[]) {
