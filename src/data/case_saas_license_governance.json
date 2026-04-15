@@ -1,0 +1,200 @@
+{
+  "id": "case-saas-license-governance",
+  "title": "SaaS License and Subscription Governance Audit",
+  "summary": "Assess whether SaaS subscriptions, license true-ups, admin seats, and renewal approvals are controlled and reconciled.",
+  "objective": "Assess whether SaaS subscription governance, license reconciliation, privileged seat management, and renewal approvals are designed and operating effectively.",
+  "deadlineDays": 4,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Subscription renewal approval",
+    "License reconciliation against active users",
+    "Privileged admin seat allocation",
+    "Offboarding of inactive SaaS accounts"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Rita Chisanga",
+      "role": "Procurement Analyst",
+      "department": "Supply Chain"
+    },
+    {
+      "id": "st-2",
+      "name": "Elias Mulenga",
+      "role": "SaaS Administrator",
+      "department": "Technology Operations"
+    },
+    {
+      "id": "st-3",
+      "name": "Janet Mwale",
+      "role": "Finance Controller",
+      "department": "Finance"
+    },
+    {
+      "id": "st-4",
+      "name": "Paul Banda",
+      "role": "Application Owner",
+      "department": "Business Systems"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Approved SaaS Renewal",
+      "description": "Subscription renewals should be approved before contract commitment.",
+      "framework": "SOC 2 / Vendor Management"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "License Reconciliation",
+      "description": "Active users should be reconciled to purchased licenses on a regular basis.",
+      "framework": "COBIT / DSS01"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Restricted Admin Seats",
+      "description": "Privileged SaaS admin seats should be limited to approved support personnel.",
+      "framework": "ISO 27001 / A.8"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Inactive Account Cleanup",
+      "description": "Inactive SaaS accounts should be disabled promptly after offboarding or non-use.",
+      "framework": "NIST CSF / PR.AA"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Renewal Quote",
+      "type": "document",
+      "content": "The renewal quote for the project tracking platform includes a 12 percent price increase and a three-year term, but the approval line is marked 'pending finance review.'",
+      "relatedControls": ["ctrl-1"],
+      "tags": ["Renewal", "Quote", "Approval"]
+    },
+    {
+      "id": "ev-2",
+      "title": "Active User License Export",
+      "type": "system",
+      "content": "The SaaS admin console shows 187 active users against 150 purchased licenses, with 14 accounts untouched for more than 90 days.",
+      "relatedControls": ["ctrl-2", "ctrl-4"],
+      "tags": ["Licenses", "Active Users", "Console"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Administrator Seat List",
+      "type": "report",
+      "content": "The admin seat list includes six privileged users, including two support contractors whose access was supposed to end after go-live support.",
+      "relatedControls": ["ctrl-3"],
+      "tags": ["Admin Seats", "Privileged", "Support"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Offboarding Ticket Export",
+      "type": "document",
+      "content": "The offboarding export shows three former employees still listed in the SaaS directory because the deactivation step was assigned but never closed.",
+      "relatedControls": ["ctrl-4"],
+      "tags": ["Offboarding", "Directory", "Deactivation"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Subscription Governance Standard",
+      "type": "document",
+      "content": "The standard requires renewal approval, license-to-user reconciliation, limited admin seats, and immediate cleanup of inactive accounts.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Standard", "Subscription", "Governance"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Quarterly True-Up Memo",
+      "type": "document",
+      "content": "The quarterly true-up memo notes the license overage but says procurement expected a late user cleanup to reduce the gap before the final invoice was issued.",
+      "relatedControls": ["ctrl-1", "ctrl-2"],
+      "tags": ["True-Up", "Overage", "Procurement"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Renewal Approved After the Quote Was Issued",
+      "description": "The subscription renewal showed finance review pending while the vendor quote was already active.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-1", "ev-6"],
+      "recommendation": "Require documented renewal approval before accepting multi-year subscription terms."
+    },
+    {
+      "id": "issue-2",
+      "title": "License Count Exceeded Purchased Seats",
+      "description": "Active SaaS users exceeded the purchased license count and some accounts were inactive for long periods.",
+      "severity": "High",
+      "relatedEvidence": ["ev-2"],
+      "recommendation": "Perform periodic license reconciliations and remove inactive users before true-up."
+    },
+    {
+      "id": "issue-3",
+      "title": "Excess Privileged SaaS Admin Seats",
+      "description": "More administrator accounts existed than the support model required, including contractors past their intended end date.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-3"],
+      "recommendation": "Restrict admin seats to named approvers and review contractor access at each renewal cycle."
+    },
+    {
+      "id": "issue-4",
+      "title": "Former Employees Still Active in SaaS Directory",
+      "description": "Former employees remained in the SaaS directory because deactivation work was started but not completed.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-4"],
+      "recommendation": "Tie offboarding to a closed deactivation checklist with owner confirmation."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "J. Mwale, Audit Manager",
+      "subject": "Kickoff: SaaS License and Subscription Governance",
+      "preview": "Check whether subscription spend and access are actually being controlled together.",
+      "body": "Look at renewal approval, actual license usage, administrator seat allocation, and whether offboarding truly removes dormant accounts. Procurement and IT both own parts of the story here."
+    },
+    {
+      "id": "msg-2",
+      "from": "Rita Chisanga",
+      "subject": "License records attached",
+      "preview": "Sending the renewal quote, active user export, and true-up memo.",
+      "body": "We usually clean the user list before the final invoice, but sometimes the timing is messy. The renewals team and the SaaS admin team do not always close their steps in the same week."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "Was the renewal approved before the quote went live?",
+      "answer": "Finance had not signed off when the quote arrived, but procurement expected the approval to land before the final commitment date.",
+      "revealsEvidenceIds": ["ev-1"]
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-2",
+      "question": "Why are there more active users than licenses?",
+      "answer": "Some accounts are inactive and should have been removed, but the cleanup queue has been trailing the true-up cycle.",
+      "revealsEvidenceIds": ["ev-2", "ev-4"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-3",
+      "question": "Why do contractors still hold admin seats?",
+      "answer": "They were left on the seat list for go-live support, and the renewal review never fully reset that access when the project stabilized.",
+      "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-4",
+      "question": "Were former employees still active because offboarding was incomplete?",
+      "answer": "Yes, the deactivation task was created, but the closure step did not happen before the directory export was pulled.",
+      "revealsEvidenceIds": ["ev-4"]
+    }
+  ],
+  "closeout": {
+    "managementMessage": "Subscription governance is fragmented between procurement and operations. Renewal approval, license cleanup, and privileged seat management need a tighter lifecycle so SaaS spend and access stay aligned.",
+    "auditorReflection": "SaaS reviews are easy to understate because the numbers look administrative. The real risk shows up when seats, contracts, and offboarding timing stop lining up."
+  }
+}

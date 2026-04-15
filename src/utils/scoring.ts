@@ -6,6 +6,8 @@ export type ScoreBreakdown = {
   missedIssueIds: string[];
   unsupportedFindingIds: string[];
   severityMismatches: string[];
+  wellSupportedFindingIds: string[];
+  thinSupportedFindingIds: string[];
 };
 
 function normalizeTitle(value: string) {
@@ -221,12 +223,22 @@ function scoreFindingAgainstIssue(finding: DraftFinding, issue: Issue) {
   return Math.max(0, Math.min(1, blendedScore));
 }
 
+function getEvidenceOverlapCount(finding: DraftFinding, issue: Issue) {
+  const relatedEvidenceSet = new Set(issue.relatedEvidence);
+
+  return finding.linkedEvidenceIds.reduce((count, evidenceId) => {
+    return relatedEvidenceSet.has(evidenceId) ? count + 1 : count;
+  }, 0);
+}
+
 export function scoreFindings(expectedIssues: Issue[], submittedFindings: DraftFinding[]): ScoreBreakdown {
   let score = 0;
   const matchedIssueIds: string[] = [];
   const missedIssueIds: string[] = [];
   const unsupportedFindingIds: string[] = [];
   const severityMismatches: string[] = [];
+  const wellSupportedFindingIds: string[] = [];
+  const thinSupportedFindingIds: string[] = [];
 
   const candidates = submittedFindings.flatMap((finding) =>
     expectedIssues.map((issue) => ({
@@ -274,25 +286,28 @@ export function scoreFindings(expectedIssues: Issue[], submittedFindings: DraftF
 
     if (!match) {
       unsupportedFindingIds.push(finding.id);
-      score -= 5;
+      score -= 8;
       return;
     }
 
     matchedIssueIds.push(match.id);
-    score += 15;
+    score += 12;
 
     if (finding.severity === match.severity) {
-      score += 5;
+      score += 4;
     } else {
       severityMismatches.push(match.id);
     }
 
-    const hasEvidenceOverlap = finding.linkedEvidenceIds.some((evidenceId) =>
-      match.relatedEvidence.includes(evidenceId),
-    );
+    const evidenceOverlapCount = getEvidenceOverlapCount(finding, match);
+    const hasEvidenceOverlap = evidenceOverlapCount > 0;
 
     if (hasEvidenceOverlap) {
-      score += 5;
+      wellSupportedFindingIds.push(finding.id);
+      score += evidenceOverlapCount > 1 ? 8 : 6;
+    } else {
+      thinSupportedFindingIds.push(finding.id);
+      score -= finding.linkedEvidenceIds.length > 0 ? 2 : 4;
     }
 
     if (finding.recommendation.trim().length > 0) {
@@ -312,5 +327,7 @@ export function scoreFindings(expectedIssues: Issue[], submittedFindings: DraftF
     missedIssueIds,
     unsupportedFindingIds,
     severityMismatches,
+    wellSupportedFindingIds,
+    thinSupportedFindingIds,
   };
 }

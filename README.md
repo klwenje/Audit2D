@@ -41,7 +41,7 @@ The first playable shell is in place:
 - stakeholder interviews that reveal and reinforce evidence trails
 - polished report closeout with narrative feedback and executive summary
 - printable-style final report sheet inside the results flow
-- eight audit scenarios spanning access, backup, change, incident, vendor, patching, records, and device retirement themes
+- eleven audit scenarios spanning access, backup, change, incident, vendor, patching, records, device retirement, network segmentation, SaaS governance, and service account themes
 
 ## Run Locally
 

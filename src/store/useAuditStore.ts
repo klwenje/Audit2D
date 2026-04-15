@@ -255,6 +255,22 @@ function sanitizeDraftFindings(auditCase: AuditCase, findings: DraftFinding[]) {
   }));
 }
 
+function normalizeScoreBreakdown(score: ScoreBreakdown | null | undefined): ScoreBreakdown | null {
+  if (!score) {
+    return null;
+  }
+
+  return {
+    score: Number.isFinite(score.score) ? score.score : 0,
+    matchedIssueIds: Array.isArray(score.matchedIssueIds) ? score.matchedIssueIds : [],
+    missedIssueIds: Array.isArray(score.missedIssueIds) ? score.missedIssueIds : [],
+    unsupportedFindingIds: Array.isArray(score.unsupportedFindingIds) ? score.unsupportedFindingIds : [],
+    severityMismatches: Array.isArray(score.severityMismatches) ? score.severityMismatches : [],
+    wellSupportedFindingIds: Array.isArray(score.wellSupportedFindingIds) ? score.wellSupportedFindingIds : [],
+    thinSupportedFindingIds: Array.isArray(score.thinSupportedFindingIds) ? score.thinSupportedFindingIds : [],
+  };
+}
+
 export const useAuditStore = create<AuditState>((set, get) => ({
   availableCases: auditCases,
   selectedCaseId: starterCase.id,
@@ -353,7 +369,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
           linkedEvidenceIds: sanitizeEvidenceIds(runCase, snapshot.findingDraftForm.linkedEvidenceIds),
         },
         reportSubmitted: snapshot.reportSubmitted,
-        finalScore: snapshot.finalScore,
+        finalScore: normalizeScoreBreakdown(snapshot.finalScore),
       };
     }),
   getSnapshot: (): AuditStateSnapshot => {

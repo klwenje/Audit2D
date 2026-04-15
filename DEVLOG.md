@@ -26,3 +26,5 @@ Next: add more case families or begin introducing case randomization and difficu
 
 Expanded the study library with three new audit cases covering patch and vulnerability management, data retention and records disposal, and IT asset retirement and media sanitization.
 Kept the content aligned to the existing case schema so the new scenarios slot into the current menu, evidence, and interview flow without touching the UI or store architecture.
+Added a second content-expansion pass with network segmentation, SaaS license governance, and service account governance scenarios to broaden study coverage across architecture, subscriptions, and non-human identity controls.
+Kept the additions in `src/data/**` and updated the case catalog plus project notes to reflect the larger library.

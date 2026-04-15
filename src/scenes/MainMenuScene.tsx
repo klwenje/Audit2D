@@ -16,12 +16,15 @@ import { loadSaveData } from "../utils/saveData";
 import {
   clearPracticeReplay,
   consumePracticeReplay,
+  getCareerProgressSummary,
   getCaseMasteryStats,
+  getRecentStudyRuns,
   getStudyMomentumSummary,
   loadPracticeReplay,
   queuePracticeReplay,
 } from "../utils/studyProgress";
 import { SceneModal } from "../components/SceneModal";
+import { CareerProgressPanel } from "../components/CareerProgressPanel";
 
 const menuItems = ["New Game", "Continue", "Options", "Credits"] as const;
 
@@ -68,6 +71,8 @@ export function MainMenuScene() {
 
   const selectedLabel = useMemo(() => menuItems[selectedIndex], [selectedIndex]);
   const caseCatalog = useMemo(() => buildCaseCatalog(availableCases), [availableCases]);
+  const careerSummary = useMemo(() => getCareerProgressSummary(caseCatalog), [caseCatalog]);
+  const recentRuns = useMemo(() => getRecentStudyRuns(caseCatalog, 6), [caseCatalog]);
   const filteredCases = useMemo(
     () => sortCaseCatalog(filterCaseCatalog(caseCatalog, familyFilter), caseSortMode),
     [caseCatalog, familyFilter, caseSortMode],
@@ -293,6 +298,59 @@ export function MainMenuScene() {
             {mostReplayedCaseLabel}
             {studyMomentum.mostReplayedCase ? ` (${studyMomentum.mostReplayedCase.timesPlayed} runs)` : ""}.
           </p>
+        </section>
+        <CareerProgressPanel
+          summary={careerSummary}
+          eyebrow="Career Track"
+          title="Portfolio Advancement"
+          contextLabel="Current Standing"
+          className="career-panel-menu"
+        />
+        <section className="terminal-panel portfolio-history-panel" aria-label="Recent study runs">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Portfolio History</p>
+              <h2>Recent Review Tape</h2>
+            </div>
+            <div className="panel-chip">{recentRuns.length} runs shown</div>
+          </div>
+          {recentRuns.length > 0 ? (
+            <div className="portfolio-run-list">
+              {recentRuns.map((run) => (
+                <article key={`${run.caseId}:${run.playedAt}`} className="portfolio-run-card">
+                  <div className="portfolio-run-head">
+                    <div>
+                      <p className="portfolio-run-family">{run.familyLabel}</p>
+                      <h3>{run.caseTitle}</h3>
+                    </div>
+                    <div className="portfolio-run-score">{run.score}/100</div>
+                  </div>
+                  <div className="portfolio-run-meta">
+                    <span>{formatSavedAt(run.playedAt)}</span>
+                    <span>{run.runDifficulty} run</span>
+                    <span>{run.missedIssueIds.length} missed</span>
+                  </div>
+                  <p className="scene-copy small portfolio-run-note">
+                    {run.unsupportedCount > 0
+                      ? `${run.unsupportedCount} unsupported finding${run.unsupportedCount === 1 ? "" : "s"} flagged.`
+                      : run.thinSupportedCount > 0
+                        ? `${run.thinSupportedCount} finding${run.thinSupportedCount === 1 ? "" : "s"} needed stronger evidence support.`
+                        : run.missedIssueIds.length > 0
+                          ? `Control coverage slipped on ${run.missedIssueIds.length} issue${run.missedIssueIds.length === 1 ? "" : "s"}.`
+                          : "Clean closeout with no missed issues recorded."}
+                    {" "}
+                    {run.totalControls > 0
+                      ? `Covered ${run.coveredControlCount}/${run.totalControls} control areas.`
+                      : ""}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="scene-copy small">
+              Your recent run history will appear here as you build out a study portfolio across cases and difficulty tiers.
+            </p>
+          )}
         </section>
         <section className="case-select-card" aria-label="Case selection">
           <div className="case-select-header">

@@ -1024,6 +1024,12 @@ h1 {
   margin-top: 1rem;
 }
 
+.report-rubric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.65rem;
+}
+
 .progress-summary-card {
   padding: 0.72rem 0.8rem;
   border: 1px solid rgba(61, 93, 121, 0.95);
@@ -1039,6 +1045,295 @@ h1 {
 
 .progress-summary-footer {
   margin-top: 0.9rem;
+}
+
+.career-panel {
+  display: grid;
+  gap: 0.95rem;
+  margin-top: 1.1rem;
+}
+
+.portfolio-history-panel {
+  margin-top: 1.1rem;
+}
+
+.portfolio-run-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.portfolio-run-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(61, 93, 121, 0.95);
+  background: rgba(10, 17, 29, 0.9);
+}
+
+.portfolio-run-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.portfolio-run-head h3 {
+  margin: 0.15rem 0 0;
+  color: #fff7bf;
+  font-size: 1rem;
+}
+
+.portfolio-run-family {
+  margin: 0;
+  color: #8ad3ff;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.portfolio-run-score {
+  min-width: 5.4rem;
+  padding: 0.42rem 0.55rem;
+  border: 1px solid rgba(157, 228, 176, 0.3);
+  background: rgba(8, 22, 15, 0.82);
+  color: #d8f2dc;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.portfolio-run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: #8fa8bf;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.portfolio-run-meta span {
+  padding: 0.2rem 0.42rem;
+  border: 1px solid rgba(138, 211, 255, 0.16);
+  background: rgba(8, 15, 24, 0.78);
+}
+
+.portfolio-run-note {
+  margin: 0;
+}
+
+.career-panel-menu,
+.career-panel-results {
+  border-color: rgba(157, 228, 176, 0.34);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(157, 228, 176, 0.08), transparent 30%),
+    linear-gradient(180deg, rgba(8, 16, 26, 0.9), rgba(7, 12, 20, 0.98));
+}
+
+.career-panel-menu::before,
+.career-panel-results::before {
+  background:
+    linear-gradient(135deg, rgba(157, 228, 176, 0.08), transparent 38%),
+    radial-gradient(circle at 82% 14%, rgba(121, 194, 255, 0.06), transparent 20%);
+}
+
+.career-panel-header {
+  margin-bottom: 0.1rem;
+}
+
+.career-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.career-title-row h3 {
+  margin: 0.18rem 0 0;
+  color: #fff7bf;
+  font-size: clamp(1.15rem, 2.8vw, 1.6rem);
+}
+
+.career-title-label {
+  margin: 0;
+  color: #8ad3ff;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.76rem;
+}
+
+.career-level-chip,
+.career-band-summary-chip {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(157, 228, 176, 0.36);
+  background: rgba(8, 22, 15, 0.84);
+  color: #d8f2dc;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.career-band-summary {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(61, 93, 121, 0.95);
+  background: rgba(10, 17, 29, 0.84);
+}
+
+.career-band-summary p {
+  margin: 0;
+}
+
+.career-meter {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(61, 93, 121, 0.95);
+  background: rgba(10, 17, 29, 0.88);
+}
+
+.career-meter-head,
+.career-meter-foot,
+.career-coverage-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.career-meter-head strong,
+.career-coverage-head strong {
+  color: #fff7bf;
+  font-size: 0.98rem;
+}
+
+.career-meter-track,
+.career-coverage-track {
+  height: 0.55rem;
+  border: 1px solid rgba(138, 211, 255, 0.22);
+  background: rgba(6, 11, 18, 0.94);
+  overflow: hidden;
+}
+
+.career-meter-fill,
+.career-coverage-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(157, 228, 176, 0.9), rgba(138, 211, 255, 0.95));
+  box-shadow: 0 0 16px rgba(138, 211, 255, 0.16);
+}
+
+.career-meter-foot {
+  color: #8fa8bf;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.career-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.career-stat-card {
+  padding: 0.72rem 0.8rem;
+  border: 1px solid rgba(61, 93, 121, 0.95);
+  background: rgba(10, 17, 29, 0.9);
+}
+
+.career-stat-card strong {
+  display: block;
+  margin-top: 0.4rem;
+  color: #fff7bf;
+  font-size: 1.08rem;
+}
+
+.career-band-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.career-band-card,
+.career-coverage-card {
+  padding: 0.75rem 0.8rem;
+  border: 1px solid rgba(61, 93, 121, 0.95);
+  background: rgba(10, 17, 29, 0.9);
+}
+
+.career-band-card.untested {
+  border-color: rgba(98, 119, 143, 0.8);
+}
+
+.career-band-card.building {
+  border-color: rgba(138, 211, 255, 0.3);
+}
+
+.career-band-card.stable {
+  border-color: rgba(157, 228, 176, 0.3);
+}
+
+.career-band-card.strong {
+  border-color: rgba(255, 247, 191, 0.3);
+}
+
+.career-band-card.trusted {
+  border-color: rgba(255, 197, 124, 0.34);
+}
+
+.career-band-head,
+.career-coverage-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.career-band-label {
+  color: #a5d6ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.76rem;
+}
+
+.career-band-card strong,
+.career-coverage-card strong {
+  color: #fff7bf;
+}
+
+.career-band-card p,
+.career-coverage-card p {
+  margin: 0.4rem 0 0;
+  color: #8fa8bf;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.career-coverage-block {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(61, 93, 121, 0.95);
+  background: rgba(10, 17, 29, 0.88);
+}
+
+.career-coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.career-coverage-card-head span {
+  color: #d6e1f0;
+  font-size: 0.92rem;
+}
+
+.career-next-step {
+  margin: 0;
+  color: #d6e1f0;
+  line-height: 1.6;
 }
 
 .study-stat-grid {
@@ -1154,12 +1449,22 @@ h1 {
   .pause-shell-grid,
   .workstation-topbar,
   .report-closeout-grid,
-  .report-sheet-grid {
+  .report-sheet-grid,
+  .career-stat-grid,
+  .career-band-grid,
+  .career-coverage-grid {
     grid-template-columns: 1fr;
   }
 
   .pause-actions {
     grid-template-columns: 1fr;
+  }
+
+  .career-title-row,
+  .career-meter-head,
+  .career-meter-foot,
+  .career-coverage-head {
+    align-items: flex-start;
   }
 }
 

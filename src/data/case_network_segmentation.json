@@ -1,0 +1,192 @@
+{
+  "id": "case-network-segmentation",
+  "title": "Network Segmentation and Firewall Review",
+  "summary": "Assess whether firewall rules, remote admin access, DMZ controls, and exception reviews are preventing unnecessary lateral movement.",
+  "objective": "Assess whether network segmentation and firewall rule governance are designed and operating effectively for critical internal zones and remote administration paths.",
+  "deadlineDays": 4,
+  "initialEvidenceIds": ["ev-2"],
+  "scope": [
+    "Firewall rule approval and review",
+    "Remote administrative access paths",
+    "Segmentation between user, server, and DMZ zones",
+    "Exception handling for temporary access"
+  ],
+  "stakeholders": [
+    {
+      "id": "st-1",
+      "name": "Musa Kunda",
+      "role": "Network Engineer",
+      "department": "Infrastructure"
+    },
+    {
+      "id": "st-2",
+      "name": "Brenda Masebo",
+      "role": "Security Architect",
+      "department": "Information Security"
+    },
+    {
+      "id": "st-3",
+      "name": "Felix Chileshe",
+      "role": "Platform Manager",
+      "department": "Technology Operations"
+    },
+    {
+      "id": "st-4",
+      "name": "Hazel Phiri",
+      "role": "Application Support Lead",
+      "department": "Business Systems"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-1",
+      "name": "Approved Firewall Rule Changes",
+      "description": "Firewall rules should be approved before implementation and reviewed periodically for necessity.",
+      "framework": "ISO 27001 / A.8"
+    },
+    {
+      "id": "ctrl-2",
+      "name": "Restricted Remote Administration",
+      "description": "Remote administration should be limited to approved jump hosts or management networks.",
+      "framework": "SOC 2 / Logical Access"
+    },
+    {
+      "id": "ctrl-3",
+      "name": "Zone Segmentation Enforcement",
+      "description": "User, server, and DMZ traffic should be separated according to the network design standard.",
+      "framework": "NIST CSF / PR.AC"
+    },
+    {
+      "id": "ctrl-4",
+      "name": "Temporary Access Exception Review",
+      "description": "Temporary network access exceptions should have expiry dates and periodic review.",
+      "framework": "COBIT / DSS05"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "ev-1",
+      "title": "Firewall Rule Export",
+      "type": "system",
+      "content": "The firewall export includes an inbound rule allowing broad remote access from a vendor subnet to the finance server zone, with no expiry date or linked approval ticket.",
+      "relatedControls": ["ctrl-1", "ctrl-2"],
+      "tags": ["Firewall", "Remote Access", "Rule Export"]
+    },
+    {
+      "id": "ev-2",
+      "title": "Change Request for Temporary Access",
+      "type": "document",
+      "content": "A temporary access request for patch weekend notes that the rule should be reviewed after the maintenance window, but the follow-up section is blank.",
+      "relatedControls": ["ctrl-4"],
+      "tags": ["Temporary Access", "Change Request", "Follow-Up"]
+    },
+    {
+      "id": "ev-3",
+      "title": "Network Segmentation Diagram",
+      "type": "document",
+      "content": "The segmentation diagram shows a jump host between the admin and server zones, but the live firewall export indicates a direct exception path from the user subnet to one application server.",
+      "relatedControls": ["ctrl-2", "ctrl-3"],
+      "tags": ["Diagram", "Segmentation", "Jump Host"]
+    },
+    {
+      "id": "ev-4",
+      "title": "Security Review Memo",
+      "type": "document",
+      "content": "Security review notes that the temporary vendor subnet exception was intended only for migration weekend and should have been removed once testing completed.",
+      "relatedControls": ["ctrl-1", "ctrl-4"],
+      "tags": ["Security Review", "Exception", "Migration"]
+    },
+    {
+      "id": "ev-5",
+      "title": "Network Design Standard",
+      "type": "document",
+      "content": "The standard requires approved firewall changes, remote admin access only through managed jump hosts, strict zone separation, and time-bound exceptions for temporary access.",
+      "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
+      "tags": ["Standard", "Network", "Segmentation"]
+    },
+    {
+      "id": "ev-6",
+      "title": "Intrusion Scan Summary",
+      "type": "report",
+      "content": "The recent scan summary notes that east-west traffic between the user VLAN and an application server was observed, but the analyst marked it as expected pending a network change window.",
+      "relatedControls": ["ctrl-3", "ctrl-4"],
+      "tags": ["Scan", "Traffic", "Exception"]
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue-1",
+      "title": "Broad Firewall Rule Without Approval Trail",
+      "description": "A remote access firewall rule remained active without clear approval or expiry evidence.",
+      "severity": "High",
+      "relatedEvidence": ["ev-1", "ev-2"],
+      "recommendation": "Require ticketed approval and automatic expiry for broad temporary firewall access."
+    },
+    {
+      "id": "issue-2",
+      "title": "Direct Access Bypassed Network Segmentation",
+      "description": "A live exception path allowed user subnet traffic into a server zone outside the normal design.",
+      "severity": "High",
+      "relatedEvidence": ["ev-3", "ev-6"],
+      "recommendation": "Block non-standard network paths unless approved compensating controls are documented."
+    },
+    {
+      "id": "issue-3",
+      "title": "Temporary Access Exception Not Removed",
+      "description": "An access exception created for a migration remained in place after the stated maintenance window.",
+      "severity": "Medium",
+      "relatedEvidence": ["ev-2", "ev-4"],
+      "recommendation": "Track temporary network exceptions to expiry and review them after the change window closes."
+    }
+  ],
+  "inbox": [
+    {
+      "id": "msg-1",
+      "from": "B. Masebo, Audit Manager",
+      "subject": "Kickoff: Network Segmentation and Firewall Review",
+      "preview": "Test whether network paths are actually controlled or just documented as controlled.",
+      "body": "Focus on how firewall rules are approved, whether remote admin access is really limited to managed paths, and whether temporary exceptions are removed when they should be."
+    },
+    {
+      "id": "msg-2",
+      "from": "Musa Kunda",
+      "subject": "Firewall artifacts attached",
+      "preview": "Sharing the current export, network diagram, and migration notes.",
+      "body": "The environment has a few legacy exceptions from prior migrations. Some of them were meant to be temporary, although a few may still be listed until the next clean-up cycle."
+    }
+  ],
+  "interviewPrompts": [
+    {
+      "id": "ip-1",
+      "stakeholderId": "st-1",
+      "question": "Why is the vendor subnet still allowed into the finance server zone?",
+      "answer": "That path was opened for migration weekend and was supposed to be removed afterward. I do not think the cleanup ticket was ever closed out.",
+      "revealsEvidenceIds": ["ev-1", "ev-2"]
+    },
+    {
+      "id": "ip-2",
+      "stakeholderId": "st-2",
+      "question": "Is remote admin traffic restricted to jump hosts?",
+      "answer": "Mostly yes, but one exception path still exists for a legacy application server. It was meant to be temporary, yet the live export suggests it is still active.",
+      "revealsEvidenceIds": ["ev-3"]
+    },
+    {
+      "id": "ip-3",
+      "stakeholderId": "st-3",
+      "question": "Was the network exception reviewed after migration?",
+      "answer": "We expected a review after the change window, but the follow-up note was vague and I cannot see evidence that the exception was formally removed.",
+      "revealsEvidenceIds": ["ev-4"]
+    },
+    {
+      "id": "ip-4",
+      "stakeholderId": "st-4",
+      "question": "Are the segmentation alerts expected traffic or a control break?",
+      "answer": "Some east-west traffic is expected during patch windows, but this particular path was flagged because it does not match the normal architecture.",
+      "revealsEvidenceIds": ["ev-6"]
+    }
+  ],
+  "closeout": {
+    "managementMessage": "The network control environment is documented, but temporary exceptions and direct paths are weakening the design. Firewall governance needs tighter approval and cleanup discipline to keep segmentation meaningful.",
+    "auditorReflection": "Network reviews usually hide their real risk in exceptions. The key question is whether the live rule set still matches the approved architecture."
+  }
+}

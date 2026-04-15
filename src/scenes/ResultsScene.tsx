@@ -3,10 +3,13 @@ import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
 import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
+import { CareerProgressPanel } from "../components/CareerProgressPanel";
+import { buildCaseCatalog } from "../utils/caseCatalog";
 import { clearSaveData } from "../utils/saveData";
 import { playBackTone, playConfirmTone } from "../utils/audio";
 import {
   clearPracticeReplay,
+  getCareerProgressSummary,
   getCaseMasteryStats,
   getStudyMomentumSummary,
   queuePracticeReplay,
@@ -31,34 +34,45 @@ function getPerformanceNarrative(
   score: number,
   matchedCount: number,
   missedCount: number,
+  wellSupportedCount: number,
+  thinSupportedCount: number,
   unsupportedCount: number,
 ) {
   if (score >= 85) {
-    return `You identified ${matchedCount} key issues and kept unsupported reporting under control. This reads like a disciplined audit closeout with credible support.`;
+    return `You identified ${matchedCount} key issues, with ${wellSupportedCount} findings backed by the right evidence. This reads like a disciplined audit closeout, though ${thinSupportedCount} findings still need tighter support discipline.`;
   }
 
   if (score >= 65) {
-    return `You captured ${matchedCount} issues, but ${missedCount} important items still slipped through. The fundamentals are there, and the next improvement is tighter follow-through.`;
+    return `You captured ${matchedCount} issues, but ${missedCount} important items still slipped through. ${wellSupportedCount} findings were well evidenced, while ${thinSupportedCount} were only partly supported.`;
   }
 
   if (score >= 45) {
-    return `You surfaced some real risk, but the report still feels incomplete. Missed issues and weaker support are holding the audit back from a stronger conclusion.`;
+    return `You surfaced some real risk, but the report still feels incomplete. ${unsupportedCount} unsupported findings and ${thinSupportedCount} thinly supported findings are holding the audit back from a stronger conclusion.`;
   }
 
-  return `The engagement needs more evidence-backed judgment. Too many control gaps were missed or weakly supported to make the report persuasive.`;
+  return `The engagement needs more evidence-backed judgment. Too many control gaps were missed or weakly supported to make the report persuasive, and only ${wellSupportedCount} findings were clearly backed by artifacts.`;
 }
 
 function getSeverityLabel(count: number, label: string) {
   return `${count} ${label}${count === 1 ? "" : "s"}`;
 }
 
-function getNextStepAdvice(score: number, missedCount: number, unsupportedCount: number) {
+function getNextStepAdvice(
+  score: number,
+  missedCount: number,
+  unsupportedCount: number,
+  thinSupportedCount: number,
+) {
   if (score >= 85) {
     return "Push into harder cases next. Your next gain will come from spotting edge cases earlier and tightening report language.";
   }
 
   if (unsupportedCount > 0) {
     return "Focus on evidence discipline. Before writing a finding, make sure you can point to the exact document, extract, or interview support behind it.";
+  }
+
+  if (thinSupportedCount > 0) {
+    return "Focus on proof quality. Some findings were directionally right but not anchored to the exact artifacts that justify the claim.";
   }
 
   if (missedCount > 0) {
@@ -140,8 +154,27 @@ export function ResultsScene() {
     }
 
     didRecordRunRef.current = runKey;
-    recordCaseStudyRun(auditCase.id, finalScore.score, finalScore.missedIssueIds);
-  }, [auditCase.id, finalScore]);
+    const controlCoverage = auditCase.controls.map((control) => {
+      const relatedIssues = auditCase.issues.filter((issue) =>
+        issue.relatedEvidence.some((evidenceId) =>
+          auditCase.evidence.find((evidence) => evidence.id === evidenceId)?.relatedControls.includes(control.id),
+        ),
+      );
+
+      return {
+        matchedIssues: relatedIssues.filter((issue) => finalScore.matchedIssueIds.includes(issue.id)),
+      };
+    });
+    const coveredControlCount = controlCoverage.filter((entry) => entry.matchedIssues.length > 0).length;
+
+    recordCaseStudyRun(auditCase.id, finalScore.score, finalScore.missedIssueIds, {
+      runDifficulty,
+      unsupportedCount: finalScore.unsupportedFindingIds.length,
+      thinSupportedCount: finalScore.thinSupportedFindingIds.length,
+      coveredControlCount,
+      totalControls: auditCase.controls.length,
+    });
+  }, [auditCase, finalScore, runDifficulty]);
 
   if (!finalScore) {
     return (
@@ -163,12 +196,20 @@ export function ResultsScene() {
   const unsupportedFindings = draftedFindings.filter((finding) =>
     finalScore.unsupportedFindingIds.includes(finding.id),
   );
+  const wellSupportedFindings = draftedFindings.filter((finding) =>
+    finalScore.wellSupportedFindingIds.includes(finding.id),
+  );
+  const thinSupportedFindings = draftedFindings.filter((finding) =>
+    finalScore.thinSupportedFindingIds.includes(finding.id),
+  );
   const rank = getRank(finalScore.score);
   const headline = getPerformanceHeadline(finalScore.score);
   const narrative = getPerformanceNarrative(
     finalScore.score,
     matchedIssues.length,
     missedIssues.length,
+    wellSupportedFindings.length,
+    thinSupportedFindings.length,
     unsupportedFindings.length,
   );
   const draftedHigh = draftedFindings.filter((finding) => finding.severity === "High").length;
@@ -178,11 +219,22 @@ export function ResultsScene() {
     finalScore.score,
     missedIssues.length,
     unsupportedFindings.length,
+    thinSupportedFindings.length,
   );
   const caseMastery = getCaseMasteryStats(auditCase.id);
   const projectedRuns = caseMastery.timesPlayed + 1;
   const projectedBestScore =
     caseMastery.bestScore === null ? finalScore.score : Math.max(caseMastery.bestScore, finalScore.score);
+  const caseCatalog = useMemo(() => buildCaseCatalog(availableCases), [availableCases]);
+  const careerSummary = useMemo(
+    () =>
+      getCareerProgressSummary(caseCatalog, {
+        caseId: auditCase.id,
+        score: finalScore.score,
+        missedIssueIds: finalScore.missedIssueIds,
+      }),
+    [auditCase.id, caseCatalog, finalScore.missedIssueIds, finalScore.score],
+  );
   const studyMomentum = useMemo(
     () =>
       getStudyMomentumSummary(
@@ -233,6 +285,10 @@ export function ResultsScene() {
       missedIssues: relatedIssues.filter((issue) => finalScore.missedIssueIds.includes(issue.id)),
     };
   });
+  const coveredControlCount = controlCoverage.filter((entry) => entry.matchedIssues.length > 0).length;
+  const partiallyCoveredControlCount = controlCoverage.filter(
+    (entry) => entry.matchedIssues.length > 0 && entry.missedIssues.length > 0,
+  ).length;
 
   return (
     <section className="scene scene-results">
@@ -408,6 +464,13 @@ export function ResultsScene() {
             {studyMomentum.mostReplayedCase ? ` (${studyMomentum.mostReplayedCase.timesPlayed} runs)` : ""}.
           </p>
         </section>
+        <CareerProgressPanel
+          summary={careerSummary}
+          eyebrow="Promotion Review"
+          title="Career Advancement"
+          contextLabel="Projected After Run"
+          className="career-panel-results"
+        />
 
         <section className="report-sheet" aria-label="Printable audit report">
           <div className="report-sheet-header">
@@ -448,8 +511,41 @@ export function ResultsScene() {
                 <li>{getSeverityLabel(draftedHigh, "High finding")}</li>
                 <li>{getSeverityLabel(draftedMedium, "Medium finding")}</li>
                 <li>{getSeverityLabel(draftedLow, "Low finding")}</li>
+                <li>{getSeverityLabel(wellSupportedFindings.length, "evidence-backed finding")}</li>
+                <li>{getSeverityLabel(thinSupportedFindings.length, "thinly supported finding")}</li>
+                <li>
+                  {coveredControlCount}/{auditCase.controls.length} control areas covered
+                </li>
                 <li>{reviewedEvidenceIds.length} evidence items reviewed</li>
               </ul>
+            </div>
+          </div>
+
+          <div className="report-sheet-section">
+            <h3>Rubric Snapshot</h3>
+            <div className="report-rubric-grid">
+              <article className="progress-summary-card">
+                <span className="metric-label">Evidence-Backed</span>
+                <strong>{wellSupportedFindings.length}</strong>
+                <p className="terminal-muted">Findings tied directly to the right artifacts.</p>
+              </article>
+              <article className="progress-summary-card">
+                <span className="metric-label">Thin Support</span>
+                <strong>{thinSupportedFindings.length}</strong>
+                <p className="terminal-muted">Directionally right, but not anchored tightly enough.</p>
+              </article>
+              <article className="progress-summary-card">
+                <span className="metric-label">Control Coverage</span>
+                <strong>{coveredControlCount}</strong>
+                <p className="terminal-muted">
+                  {partiallyCoveredControlCount} areas were only partially covered.
+                </p>
+              </article>
+              <article className="progress-summary-card">
+                <span className="metric-label">Unsupported</span>
+                <strong>{unsupportedFindings.length}</strong>
+                <p className="terminal-muted">Claims that moved ahead of the evidence.</p>
+              </article>
             </div>
           </div>
 
@@ -552,6 +648,76 @@ export function ResultsScene() {
                 <li>No severity mismatches.</li>
               )}
             </ul>
+          </section>
+
+          <section className="terminal-panel">
+            <h2>Evidence Quality</h2>
+            <div className="terminal-panel-stack">
+              {wellSupportedFindings.length > 0 ? (
+                <article className="study-review-card">
+                  <div className="mail-header">
+                    <strong>Evidence-backed findings</strong>
+                    <span>{wellSupportedFindings.length}</span>
+                  </div>
+                  <p className="mail-body">
+                    These findings were linked to the right artifacts and read like defensible audit work.
+                  </p>
+                  <p className="terminal-muted">
+                    {wellSupportedFindings
+                      .map((finding) => finding.title)
+                      .join(", ")}
+                  </p>
+                </article>
+              ) : (
+                <p className="terminal-muted">No findings were strongly backed by evidence.</p>
+              )}
+              {thinSupportedFindings.length > 0 ? (
+                <article className="study-review-card">
+                  <div className="mail-header">
+                    <strong>Thinly supported findings</strong>
+                    <span>{thinSupportedFindings.length}</span>
+                  </div>
+                  <p className="mail-body">
+                    The call was directionally right, but the report did not point tightly enough to the supporting artifacts.
+                  </p>
+                  <p className="terminal-muted">
+                    {thinSupportedFindings
+                      .map((finding) => finding.title)
+                      .join(", ")}
+                  </p>
+                </article>
+              ) : (
+                <p className="terminal-muted">No thinly supported findings were flagged.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="terminal-panel">
+            <h2>Control Coverage</h2>
+            <div className="terminal-panel-stack">
+              {controlCoverage.map((entry) => {
+                const coverageLabel =
+                  entry.matchedIssues.length === 0
+                    ? "Not covered"
+                    : entry.missedIssues.length > 0
+                      ? "Partially covered"
+                      : "Covered";
+
+                return (
+                  <article key={entry.control.id} className="study-review-card">
+                    <div className="mail-header">
+                      <strong>{entry.control.name}</strong>
+                      <span>{coverageLabel}</span>
+                    </div>
+                    <p className="mail-body">{entry.control.description}</p>
+                    <p className="terminal-muted">
+                      {entry.matchedIssues.length} matched issue{entry.matchedIssues.length === 1 ? "" : "s"},
+                      {entry.missedIssues.length} missed.
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
           </section>
 
           <section className="terminal-panel">

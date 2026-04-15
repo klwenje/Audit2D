@@ -1,4 +1,5 @@
 import { normalizeRunDifficulty, type RunDifficulty } from "./runDifficulty";
+import type { CaseCatalogEntry } from "./caseCatalog";
 
 const STUDY_PROGRESS_KEY = "audit-desk-retro-study-progress-v1";
 const PRACTICE_REPLAY_KEY = "audit-desk-retro-practice-replay-v1";
@@ -26,6 +27,70 @@ export type StudyMomentumSummary = {
   } | null;
 };
 
+export type CareerBandKey = "untested" | "building" | "stable" | "strong" | "trusted";
+
+export type CareerBandEntry = {
+  key: CareerBandKey;
+  label: string;
+  description: string;
+  count: number;
+};
+
+export type CareerCoverageEntry = {
+  familyId: string;
+  familyLabel: string;
+  touchedCases: number;
+  totalCases: number;
+  coveragePercent: number;
+};
+
+export type CareerProgressSummary = {
+  careerLevel: number;
+  careerTitle: string;
+  careerXp: number;
+  currentLevelMinXp: number;
+  totalCases: number;
+  casesTouched: number;
+  totalRuns: number;
+  masteredCases: number;
+  strongCases: number;
+  recentStrongCaseStreak: number;
+  averageBestScore: number | null;
+  masteryBand: {
+    key: CareerBandKey;
+    label: string;
+    description: string;
+  };
+  masteryBands: CareerBandEntry[];
+  categoryCoverage: CareerCoverageEntry[];
+  uncoveredFamilies: string[];
+  nextPromotion: {
+    level: number;
+    title: string;
+    minXp: number;
+    xpNeeded: number;
+    progressPercent: number;
+  } | null;
+  nextMilestoneMessage: string;
+};
+
+export type StudyRunRecord = {
+  caseId: string;
+  playedAt: string;
+  score: number;
+  runDifficulty: RunDifficulty;
+  missedIssueIds: string[];
+  unsupportedCount: number;
+  thinSupportedCount: number;
+  coveredControlCount: number;
+  totalControls: number;
+};
+
+export type PortfolioRunEntry = StudyRunRecord & {
+  caseTitle: string;
+  familyLabel: string;
+};
+
 export type ProjectedStudyRun = {
   caseId: string;
   score: number;
@@ -35,7 +100,54 @@ export type ProjectedStudyRun = {
 type StudyProgressStore = {
   version: 1;
   cases: Record<string, CaseMasteryStats>;
+  recentRuns?: StudyRunRecord[];
 };
+
+const CAREER_LEVELS = [
+  { level: 1, title: "Trainee Auditor", minXp: 0 },
+  { level: 2, title: "Field Auditor", minXp: 60 },
+  { level: 3, title: "Senior Auditor", minXp: 120 },
+  { level: 4, title: "Audit Lead", minXp: 180 },
+  { level: 5, title: "Principal Auditor", minXp: 250 },
+] as const;
+
+const MASTERY_BANDS: Array<{
+  key: CareerBandKey;
+  label: string;
+  description: string;
+  test: (score: number | null) => boolean;
+}> = [
+  {
+    key: "untested",
+    label: "Untested",
+    description: "Cases not yet played or recorded.",
+    test: (score) => score === null,
+  },
+  {
+    key: "building",
+    label: "Building",
+    description: "Early coverage with room to tighten evidence and severity.",
+    test: (score) => typeof score === "number" && score < 45,
+  },
+  {
+    key: "stable",
+    label: "Stable",
+    description: "Consistent fieldwork with some misses still worth revisiting.",
+    test: (score) => typeof score === "number" && score >= 45 && score < 65,
+  },
+  {
+    key: "strong",
+    label: "Strong",
+    description: "Reliable audit judgment with solid issue capture.",
+    test: (score) => typeof score === "number" && score >= 65 && score < 80,
+  },
+  {
+    key: "trusted",
+    label: "Trusted",
+    description: "High-confidence reporting and clean control coverage.",
+    test: (score) => typeof score === "number" && score >= 80,
+  },
+];
 
 export type PracticeReplaySession = {
   caseId: string;
@@ -57,6 +169,94 @@ function normalizeIssueIds(issueIds: string[]) {
   return Array.from(new Set(issueIds.filter(Boolean)));
 }
 
+function getMasteryBand(score: number | null) {
+  return MASTERY_BANDS.find((band) => band.test(score)) ?? MASTERY_BANDS[0];
+}
+
+function getCareerLevel(xp: number) {
+  const sortedLevels = [...CAREER_LEVELS].sort((left, right) => right.minXp - left.minXp);
+  return sortedLevels.find((level) => xp >= level.minXp) ?? CAREER_LEVELS[0];
+}
+
+function getNextCareerLevel(level: number) {
+  return CAREER_LEVELS.find((entry) => entry.level === level + 1) ?? null;
+}
+
+function getRecentStrongCaseStreak(caseStats: Array<{ stats: CaseMasteryStats }>) {
+  const recentCases = [...caseStats]
+    .filter(({ stats }) => stats.timesPlayed > 0 && typeof stats.lastPlayedAt === "string")
+    .sort((left, right) => {
+      const leftTime = left.stats.lastPlayedAt ? new Date(left.stats.lastPlayedAt).getTime() : 0;
+      const rightTime = right.stats.lastPlayedAt ? new Date(right.stats.lastPlayedAt).getTime() : 0;
+      return rightTime - leftTime;
+    });
+
+  let streak = 0;
+  for (const entry of recentCases) {
+    if (typeof entry.stats.bestScore === "number" && entry.stats.bestScore >= 65) {
+      streak += 1;
+      continue;
+    }
+
+    break;
+  }
+
+  return streak;
+}
+
+function deriveCareerXp(caseStats: Array<{ stats: CaseMasteryStats; familyId: string }>) {
+  const touchedCases = caseStats.filter(({ stats }) => stats.timesPlayed > 0);
+  const totalRuns = caseStats.reduce((sum, { stats }) => sum + stats.timesPlayed, 0);
+  const averageBestScore = touchedCases.length
+    ? Math.round(
+        touchedCases.reduce((sum, { stats }) => sum + (stats.bestScore ?? 0), 0) / touchedCases.length,
+      )
+    : null;
+  const masteredCases = touchedCases.filter(({ stats }) => (stats.bestScore ?? 0) >= 80).length;
+  const strongCases = touchedCases.filter(
+    ({ stats }) => (stats.bestScore ?? 0) >= 65 && (stats.bestScore ?? 0) < 80,
+  ).length;
+  const stableCases = touchedCases.filter(
+    ({ stats }) => (stats.bestScore ?? 0) >= 45 && (stats.bestScore ?? 0) < 65,
+  ).length;
+  const coveredFamilies = new Set(
+    caseStats.filter(({ stats }) => stats.timesPlayed > 0).map(({ familyId }) => familyId),
+  );
+  const careerXp =
+    totalRuns * 3 +
+    touchedCases.length * 8 +
+    masteredCases * 10 +
+    strongCases * 6 +
+    stableCases * 3 +
+    coveredFamilies.size * 8 +
+    (averageBestScore === null ? 0 : Math.round(averageBestScore / 3));
+
+  return {
+    careerXp,
+    totalRuns,
+    touchedCases: touchedCases.length,
+    averageBestScore,
+    masteredCases,
+    strongCases,
+  };
+}
+
+function buildCareerMilestoneMessage(summary: Omit<CareerProgressSummary, "nextMilestoneMessage">) {
+  if (summary.nextPromotion) {
+    return `Need ${summary.nextPromotion.xpNeeded} more career points for ${summary.nextPromotion.title}.`;
+  }
+
+  if (summary.uncoveredFamilies.length > 0) {
+    return `Complete a ${summary.uncoveredFamilies[0]} case to round out your portfolio and keep promotion reviews moving.`;
+  }
+
+  if (summary.recentStrongCaseStreak > 0) {
+    return `Your recent strong-case streak is ${summary.recentStrongCaseStreak}. Keep stacking clean closeouts to build the next review packet.`;
+  }
+
+  return "Keep strengthening evidence support and control coverage so the next review reads as a promotion-ready portfolio.";
+}
+
 function loadStudyProgressStore(): StudyProgressStore {
   if (typeof window === "undefined") {
     return { version: 1, cases: {} };
@@ -73,7 +273,11 @@ function loadStudyProgressStore(): StudyProgressStore {
       return { version: 1, cases: {} };
     }
 
-    return parsed;
+    return {
+      version: 1,
+      cases: parsed.cases,
+      recentRuns: Array.isArray(parsed.recentRuns) ? parsed.recentRuns : [],
+    };
   } catch {
     return { version: 1, cases: {} };
   }
@@ -206,7 +410,164 @@ export function getStudyMomentumSummary(
   };
 }
 
-export function recordCaseStudyRun(caseId: string, score: number, missedIssueIds: string[]) {
+export function getCareerProgressSummary(
+  caseCatalog: CaseCatalogEntry[],
+  projectedRun?: ProjectedStudyRun,
+): CareerProgressSummary {
+  const store = loadStudyProgressStore();
+  const caseStats = caseCatalog.map((entry) => ({
+    caseId: entry.id,
+    familyId: entry.familyId,
+    familyLabel: entry.familyLabel,
+    stats: store.cases[entry.id] ?? createDefaultCaseMasteryStats(),
+  }));
+
+  if (projectedRun) {
+    const projectedIndex = caseStats.findIndex(({ caseId }) => caseId === projectedRun.caseId);
+    if (projectedIndex >= 0) {
+      const currentStats = caseStats[projectedIndex].stats;
+      const normalizedScore = Number.isFinite(projectedRun.score)
+        ? Math.max(0, Math.round(projectedRun.score))
+        : 0;
+
+      caseStats[projectedIndex] = {
+        ...caseStats[projectedIndex],
+        stats: {
+          bestScore:
+            currentStats.bestScore === null
+              ? normalizedScore
+              : Math.max(currentStats.bestScore, normalizedScore),
+          timesPlayed: currentStats.timesPlayed + 1,
+          lastPlayedAt: new Date().toISOString(),
+          lastMissedIssueIds: normalizeIssueIds(projectedRun.missedIssueIds),
+        },
+      };
+    }
+  }
+
+  const touchedCases = caseStats.filter(({ stats }) => stats.timesPlayed > 0);
+  const touchedCaseIds = new Set(touchedCases.map(({ caseId }) => caseId));
+  const familyCoverage = caseCatalog.reduce<Map<string, CareerCoverageEntry>>((coverage, entry) => {
+    const current = coverage.get(entry.familyId) ?? {
+      familyId: entry.familyId,
+      familyLabel: entry.familyLabel,
+      touchedCases: 0,
+      totalCases: 0,
+      coveragePercent: 0,
+    };
+
+    current.totalCases += 1;
+    if (touchedCaseIds.has(entry.id)) {
+      current.touchedCases += 1;
+    }
+    current.coveragePercent =
+      current.totalCases > 0 ? Math.round((current.touchedCases / current.totalCases) * 100) : 0;
+    coverage.set(entry.familyId, current);
+    return coverage;
+  }, new Map());
+
+  const categoryCoverage = Array.from(familyCoverage.values()).sort((left, right) =>
+    left.familyLabel.localeCompare(right.familyLabel),
+  );
+  const uncoveredFamilies = categoryCoverage
+    .filter((entry) => entry.touchedCases === 0)
+    .map((entry) => entry.familyLabel);
+  const masteryBands = MASTERY_BANDS.map((band) => ({
+    key: band.key,
+    label: band.label,
+    description: band.description,
+    count: caseStats.filter(({ stats }) => band.test(stats.bestScore)).length,
+  }));
+  const careerMath = deriveCareerXp(caseStats);
+  const masteryBand = getMasteryBand(careerMath.averageBestScore);
+  const currentLevel = getCareerLevel(careerMath.careerXp);
+  const nextLevel = getNextCareerLevel(currentLevel.level);
+  const recentStrongCaseStreak = getRecentStrongCaseStreak(caseStats);
+  const nextPromotion = nextLevel
+    ? {
+        level: nextLevel.level,
+        title: nextLevel.title,
+        minXp: nextLevel.minXp,
+        xpNeeded: Math.max(0, nextLevel.minXp - careerMath.careerXp),
+        progressPercent:
+          nextLevel.minXp > currentLevel.minXp
+            ? Math.min(
+                100,
+                Math.max(
+                  0,
+                  Math.round(
+                    ((careerMath.careerXp - currentLevel.minXp) /
+                      (nextLevel.minXp - currentLevel.minXp)) *
+                      100,
+                  ),
+                ),
+              )
+            : 100,
+      }
+    : null;
+  const summaryWithoutMessage = {
+    careerLevel: currentLevel.level,
+    careerTitle: currentLevel.title,
+    careerXp: careerMath.careerXp,
+    currentLevelMinXp: currentLevel.minXp,
+    totalCases: caseCatalog.length,
+    casesTouched: careerMath.touchedCases,
+    totalRuns: careerMath.totalRuns,
+    masteredCases: careerMath.masteredCases,
+    strongCases: careerMath.strongCases,
+    recentStrongCaseStreak,
+    averageBestScore: careerMath.averageBestScore,
+    masteryBand: {
+      key: masteryBand.key,
+      label: masteryBand.label,
+      description: masteryBand.description,
+    },
+    masteryBands,
+    categoryCoverage,
+    uncoveredFamilies,
+    nextPromotion,
+    nextMilestoneMessage: "",
+  };
+
+  return {
+    ...summaryWithoutMessage,
+    nextMilestoneMessage: buildCareerMilestoneMessage(summaryWithoutMessage),
+  };
+}
+
+export function getRecentStudyRuns(
+  caseCatalog: CaseCatalogEntry[],
+  limit = 8,
+): PortfolioRunEntry[] {
+  const store = loadStudyProgressStore();
+
+  return (store.recentRuns ?? [])
+    .slice()
+    .sort((left, right) => new Date(right.playedAt).getTime() - new Date(left.playedAt).getTime())
+    .slice(0, limit)
+    .map((run) => {
+      const caseEntry = caseCatalog.find((entry) => entry.id === run.caseId);
+
+      return {
+        ...run,
+        caseTitle: caseEntry?.title ?? run.caseId,
+        familyLabel: caseEntry?.familyLabel ?? "Unknown Family",
+      };
+    });
+}
+
+export function recordCaseStudyRun(
+  caseId: string,
+  score: number,
+  missedIssueIds: string[],
+  metadata?: {
+    runDifficulty?: RunDifficulty;
+    unsupportedCount?: number;
+    thinSupportedCount?: number;
+    coveredControlCount?: number;
+    totalControls?: number;
+  },
+) {
   if (typeof window === "undefined") {
     return;
   }
@@ -214,6 +575,7 @@ export function recordCaseStudyRun(caseId: string, score: number, missedIssueIds
   const store = loadStudyProgressStore();
   const currentStats = store.cases[caseId] ?? createDefaultCaseMasteryStats();
   const normalizedScore = Number.isFinite(score) ? Math.max(0, Math.round(score)) : 0;
+  const playedAt = new Date().toISOString();
 
   store.cases[caseId] = {
     bestScore:
@@ -221,9 +583,26 @@ export function recordCaseStudyRun(caseId: string, score: number, missedIssueIds
         ? normalizedScore
         : Math.max(currentStats.bestScore, normalizedScore),
     timesPlayed: currentStats.timesPlayed + 1,
-    lastPlayedAt: new Date().toISOString(),
+    lastPlayedAt: playedAt,
     lastMissedIssueIds: normalizeIssueIds(missedIssueIds),
   };
+
+  const nextRecentRuns: StudyRunRecord[] = [
+    {
+      caseId,
+      playedAt,
+      score: normalizedScore,
+      runDifficulty: normalizeRunDifficulty(metadata?.runDifficulty),
+      missedIssueIds: normalizeIssueIds(missedIssueIds),
+      unsupportedCount: Math.max(0, metadata?.unsupportedCount ?? 0),
+      thinSupportedCount: Math.max(0, metadata?.thinSupportedCount ?? 0),
+      coveredControlCount: Math.max(0, metadata?.coveredControlCount ?? 0),
+      totalControls: Math.max(0, metadata?.totalControls ?? 0),
+    },
+    ...(store.recentRuns ?? []),
+  ];
+
+  store.recentRuns = nextRecentRuns.slice(0, 18);
 
   writeStudyProgressStore(store);
 }
