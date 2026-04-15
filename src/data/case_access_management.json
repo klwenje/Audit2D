@@ -111,6 +111,14 @@
       "content": "Access Control Policy version 1.4 was last approved 27 months ago. The review cycle in the footer states policy owners must review annually.",
       "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
       "tags": ["Policy", "Governance", "Outdated"]
+    },
+    {
+      "id": "ev-7",
+      "title": "Monthly Access Metrics Dashboard",
+      "type": "report",
+      "content": "The monthly metrics rollup shows 91 terminations processed, 14 new privileged requests, and 98% MFA coverage for standard users. No exceptions were flagged in the summary.",
+      "relatedControls": ["ctrl-1", "ctrl-3"],
+      "tags": ["Dashboard", "Metrics", "Routine"]
     }
   ],
   "issues": [

@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { OfficeCanvas } from "../game/OfficeCanvas";
 import { deskInteractZone, intersects, PLAYER_SIZE } from "../game/officeLayout";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { playBackTone, playConfirmTone } from "../utils/audio";
+import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
 
 export function OfficeScene() {
   const setScene = useGameStore((state) => state.setScene);
@@ -11,6 +12,7 @@ export function OfficeScene() {
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const auditCase = useAuditStore((state) => state.auditCase);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const canUseDesk = useMemo(
     () =>
@@ -26,8 +28,28 @@ export function OfficeScene() {
     [playerPosition.x, playerPosition.y],
   );
 
+  const openHelpOverlay = () => {
+    playConfirmTone(sfxVolume);
+    setHelpOpen(true);
+  };
+
+  const closeHelpOverlay = () => {
+    playBackTone(sfxVolume);
+    setHelpOpen(false);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (helpOpen) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "h" || event.key === "?") {
+        event.preventDefault();
+        openHelpOverlay();
+        return;
+      }
+
       if (event.key.toLowerCase() === "e" && canUseDesk) {
         playConfirmTone(sfxVolume);
         setScene("workstation");
@@ -42,7 +64,7 @@ export function OfficeScene() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canUseDesk, resetOfficeState, setScene, sfxVolume]);
+  }, [canUseDesk, helpOpen, resetOfficeState, setScene, sfxVolume]);
 
   return (
     <section className="scene scene-office">
@@ -61,6 +83,9 @@ export function OfficeScene() {
             <span>Move: WASD / Arrows</span>
             <span>Use desk: E</span>
             <span>Menu: Esc</span>
+            <button type="button" className="panel-chip panel-chip-button" onClick={openHelpOverlay}>
+              Help: H
+            </button>
           </div>
         </div>
 
@@ -70,6 +95,30 @@ export function OfficeScene() {
           Walk to the desk terminal on the right side of the room and press <strong>E</strong>.
         </p>
       </div>
+
+      {helpOpen && (
+        <SceneHelpOverlay
+          title="Office Floor Controls"
+          intro="You are still inside the simulation shell. This overlay pauses the room flow and gives you a quick control reference."
+          actionLabel="Resume Floor"
+          footer="Press Esc or use the resume button to return to the office."
+          sections={[
+            {
+              title: "Movement",
+              items: ["Use WASD or the Arrow Keys to walk around the room.", "Reach the terminal desk on the right side of the office."],
+            },
+            {
+              title: "Desk Access",
+              items: ["Press E when you are at the desk to open the workstation.", "Esc leaves the office and returns you to the main menu."],
+            },
+            {
+              title: "Study Tip",
+              items: ["Treat the office like a staging area before fieldwork begins.", "Use this room to orient yourself before starting the audit."],
+            },
+          ]}
+          onClose={closeHelpOverlay}
+        />
+      )}
     </section>
   );
 }

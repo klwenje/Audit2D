@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
+import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
+import { playBackTone, playConfirmTone } from "../utils/audio";
 
 function getEvidenceArtifactLabel(type: string) {
   const normalized = type.toLowerCase();
@@ -16,6 +18,7 @@ function getEvidenceArtifactLabel(type: string) {
 
 export function WorkstationScene() {
   const setScene = useGameStore((state) => state.setScene);
+  const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const auditCase = useAuditStore((state) => state.auditCase);
   const runMode = useAuditStore((state) => state.runMode);
   const practiceFocusIssueIds = useAuditStore((state) => state.practiceFocusIssueIds);
@@ -35,6 +38,46 @@ export function WorkstationScene() {
   const addDraftFinding = useAuditStore((state) => state.addDraftFinding);
   const removeDraftFinding = useAuditStore((state) => state.removeDraftFinding);
   const submitReport = useAuditStore((state) => state.submitReport);
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const openHelpOverlay = () => {
+    playConfirmTone(sfxVolume);
+    setHelpOpen(true);
+  };
+
+  const closeHelpOverlay = () => {
+    playBackTone(sfxVolume);
+    setHelpOpen(false);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (helpOpen) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget =
+        target !== null &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.tagName === "BUTTON" ||
+          target.isContentEditable);
+
+      if (isTypingTarget) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "h" || event.key === "?") {
+        event.preventDefault();
+        openHelpOverlay();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [helpOpen, sfxVolume]);
 
   const selectedEvidence = useMemo(
     () =>
@@ -86,6 +129,9 @@ export function WorkstationScene() {
             <span>Deadline: {auditCase.deadlineDays} days</span>
             <span>Reviewed: {reviewedCount}/{visibleEvidence.length}</span>
             <span>Interviews: {askedInterviewCount}/{auditCase.interviewPrompts.length}</span>
+            <button type="button" className="panel-chip panel-chip-button" onClick={openHelpOverlay}>
+              Help: H
+            </button>
           </div>
         </div>
 
@@ -519,6 +565,41 @@ export function WorkstationScene() {
           <span className="menu-indicator">&lt;</span>
           <span>Leave Computer</span>
         </button>
+
+        {helpOpen && (
+          <SceneHelpOverlay
+            title="Desk Terminal Guide"
+            intro="This overlay pauses the terminal and explains how to move through the audit workflow without leaving the game shell."
+            actionLabel="Resume Terminal"
+            footer="Press Esc or use the resume button to continue working the case."
+            sections={[
+              {
+                title: "Core Flow",
+                items: [
+                  "Open the inbox and case file first to orient yourself.",
+                  "Use interviews to unlock evidence and follow the trail.",
+                  "Draft findings, link supporting artifacts, and submit when the report is ready.",
+                ],
+              },
+              {
+                title: "Controls",
+                items: [
+                  "Click tabs to switch between inbox, case file, interviews, evidence, and findings.",
+                  "Click Ask to log an interview prompt and reveal more evidence.",
+                  "Use the Help button or press H to reopen this guide later.",
+                ],
+              },
+              {
+                title: "Practice Mode",
+                items: [
+                  "Practice replay focuses the run on the control areas you missed last time.",
+                  "The workstation highlights the replay focus so you can study those gaps on purpose.",
+                ],
+              },
+            ]}
+            onClose={closeHelpOverlay}
+          />
+        )}
       </div>
     </section>
   );

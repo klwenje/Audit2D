@@ -111,6 +111,14 @@
       "content": "The standard requires approval, documented testing, restricted deployment access, and post-implementation review for failed changes.",
       "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
       "tags": ["Policy", "Standard", "Governance"]
+    },
+    {
+      "id": "ev-7",
+      "title": "Release Calendar Snapshot",
+      "type": "report",
+      "content": "The quarterly release calendar shows three planned maintenance windows and two feature-freeze dates, all assigned to routine windows without exceptions.",
+      "relatedControls": ["ctrl-1", "ctrl-2"],
+      "tags": ["Calendar", "Planning", "Release"]
     }
   ],
   "issues": [

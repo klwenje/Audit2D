@@ -111,6 +111,14 @@
       "content": "The backup operations standard requires daily review of failed jobs, monthly restore tests, and retention aligned to business and legal requirements. The document was approved eight months ago.",
       "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
       "tags": ["Policy", "Standard", "Operations"]
+    },
+    {
+      "id": "ev-7",
+      "title": "Backup Capacity Forecast",
+      "type": "report",
+      "content": "The storage forecast shows backup capacity trending toward 72% utilization next quarter, with no backup job failures or restore exceptions tied to the projection itself.",
+      "relatedControls": ["ctrl-1", "ctrl-2"],
+      "tags": ["Capacity", "Forecast", "Operations"]
     }
   ],
   "issues": [

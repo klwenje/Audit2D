@@ -1,4 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  buildCaseCatalog,
+  caseFamilyOptions,
+  caseSortOptions,
+  filterCaseCatalog,
+  sortCaseCatalog,
+  type CaseFamilyFilter,
+  type CaseSortMode,
+} from "../utils/caseCatalog";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { playConfirmTone, playNavigateTone } from "../utils/audio";
@@ -46,6 +55,8 @@ export function MainMenuScene() {
   const beginSelectedCase = useAuditStore((state) => state.beginSelectedCase);
   const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [familyFilter, setFamilyFilter] = useState<CaseFamilyFilter>("all");
+  const [caseSortMode, setCaseSortMode] = useState<CaseSortMode>("recommended");
   const [practiceReplaySession, setPracticeReplaySession] = useState(() => loadPracticeReplay());
   const [menuAlert, setMenuAlert] = useState<MenuAlertState>(null);
   const saveData = loadSaveData();
@@ -54,11 +65,16 @@ export function MainMenuScene() {
   const lastSavedLabel = saveData ? formatSavedAt(saveData.savedAt) : "No active save on disk";
 
   const selectedLabel = useMemo(() => menuItems[selectedIndex], [selectedIndex]);
-  const selectedCaseIndex = useMemo(
-    () => availableCases.findIndex((auditCase) => auditCase.id === selectedCaseId),
-    [availableCases, selectedCaseId],
+  const caseCatalog = useMemo(() => buildCaseCatalog(availableCases), [availableCases]);
+  const filteredCases = useMemo(
+    () => sortCaseCatalog(filterCaseCatalog(caseCatalog, familyFilter), caseSortMode),
+    [caseCatalog, familyFilter, caseSortMode],
   );
-  const selectedCase = availableCases[selectedCaseIndex] ?? availableCases[0];
+  const selectedCaseIndex = useMemo(
+    () => filteredCases.findIndex((auditCase) => auditCase.id === selectedCaseId),
+    [filteredCases, selectedCaseId],
+  );
+  const selectedCase = filteredCases[selectedCaseIndex] ?? filteredCases[0] ?? caseCatalog[0];
   const studyMomentum = useMemo(
     () => getStudyMomentumSummary(availableCases.map((auditCase) => auditCase.id)),
     [availableCases],
@@ -93,6 +109,11 @@ export function MainMenuScene() {
   }, [availableCases, studyMomentum.mostReplayedCase]);
   const averageBestScoreLabel =
     studyMomentum.averageBestScore === null ? "—" : `${studyMomentum.averageBestScore}/100`;
+  const familyCountLabel =
+    familyFilter === "all"
+      ? "All families"
+      : caseFamilyOptions.find((option) => option.id === familyFilter)?.label ?? "Filtered";
+  const sortCountLabel = caseSortOptions.find((option) => option.id === caseSortMode)?.label ?? "Recommended";
 
   const startNewGame = () => {
     setMenuAlert(null);
@@ -133,9 +154,23 @@ export function MainMenuScene() {
   };
 
   const cycleCase = (direction: -1 | 1) => {
-    const nextIndex = (selectedCaseIndex + direction + availableCases.length) % availableCases.length;
-    setSelectedCase(availableCases[nextIndex].id);
+    if (filteredCases.length === 0) {
+      return;
+    }
+
+    const nextIndex = (selectedCaseIndex + direction + filteredCases.length) % filteredCases.length;
+    setSelectedCase(filteredCases[nextIndex].id);
   };
+
+  useEffect(() => {
+    if (filteredCases.length === 0) {
+      return;
+    }
+
+    if (!filteredCases.some((auditCase) => auditCase.id === selectedCaseId)) {
+      setSelectedCase(filteredCases[0].id);
+    }
+  }, [filteredCases, selectedCaseId, setSelectedCase]);
 
   useEffect(() => {
     if (!practiceReplaySession) {
@@ -259,6 +294,9 @@ export function MainMenuScene() {
           <div className="case-select-header">
             <p className="eyebrow">Selected Engagement</p>
             <div className="case-select-controls">
+              <div className="panel-chip case-count-chip">
+                {filteredCases.length}/{availableCases.length} in view
+              </div>
               <button
                 className="case-switch-button"
                 onClick={() => {
@@ -280,6 +318,60 @@ export function MainMenuScene() {
                 &gt;
               </button>
             </div>
+          </div>
+          <div className="catalog-controls" aria-label="Case library filters and sort order">
+            <div className="catalog-control-group">
+              <p className="metric-label">Family Filter</p>
+              <div className="catalog-chip-row" role="toolbar" aria-label="Case family filters">
+                {caseFamilyOptions.map((option) => {
+                  const isSelected = familyFilter === option.id;
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`catalog-chip ${isSelected ? "selected" : ""}`}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        playNavigateTone(sfxVolume);
+                        setFamilyFilter(option.id);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="catalog-control-group">
+              <p className="metric-label">Difficulty Sort</p>
+              <div className="catalog-chip-row" role="toolbar" aria-label="Case difficulty sort">
+                {caseSortOptions.map((option) => {
+                  const isSelected = caseSortMode === option.id;
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`catalog-chip ${isSelected ? "selected" : ""}`}
+                      aria-pressed={isSelected}
+                      onClick={() => {
+                        playNavigateTone(sfxVolume);
+                        setCaseSortMode(option.id);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className="case-meta-strip">
+            <span className="panel-chip">{selectedCase.familyLabel}</span>
+            <span className="panel-chip">{selectedCase.difficultyLabel}</span>
+            <span className="panel-chip">{sortCountLabel}</span>
+            <span className="panel-chip">{familyCountLabel}</span>
           </div>
           <h2>{selectedCase.title}</h2>
           <p className="scene-copy small">{selectedCase.summary}</p>
@@ -369,7 +461,7 @@ export function MainMenuScene() {
           </ul>
         </nav>
         <p className="scene-copy small">
-          Use Arrow Keys and Enter. Left and Right switch case files.
+          Use Arrow Keys and Enter. Left and Right switch visible case files. Filter by family and difficulty above.
         </p>
         <p className="scene-copy small menu-save-label">
           {hasSaveData ? `Last saved: ${lastSavedLabel}` : lastSavedLabel}

@@ -111,6 +111,14 @@
       "content": "The policy requires retention to follow the approved matrix, legal holds to block deletion, and expired records to be disposed of only after documented authorization.",
       "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
       "tags": ["Policy", "Records", "Governance"]
+    },
+    {
+      "id": "ev-7",
+      "title": "Cleanup Queue Summary",
+      "type": "report",
+      "content": "The cleanup queue summary shows owner-tagged mailboxes and drives awaiting review, with most items held for confirmation rather than deletion.",
+      "relatedControls": ["ctrl-1", "ctrl-4"],
+      "tags": ["Queue", "Cleanup", "Review"]
     }
   ],
   "issues": [

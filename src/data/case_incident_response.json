@@ -111,6 +111,14 @@
       "content": "The procedure defines triage SLAs, major incident escalation criteria, containment documentation, and mandatory post-incident review for material events.",
       "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
       "tags": ["Procedure", "Playbook", "Governance"]
+    },
+    {
+      "id": "ev-7",
+      "title": "On-Call Roster",
+      "type": "document",
+      "content": "The weekly on-call roster shows primary and secondary coverage for security operations across the month, with no open shift gaps or unassigned standby periods.",
+      "relatedControls": ["ctrl-1", "ctrl-2"],
+      "tags": ["Roster", "Coverage", "On-Call"]
     }
   ],
   "issues": [

@@ -111,6 +111,14 @@
       "content": "Procurement confirms the disposal vendor collected the devices during a rush pickup after office relocation, but IT was not given the full serial-number receipt until later.",
       "relatedControls": ["ctrl-1", "ctrl-4"],
       "tags": ["Pickup", "Relocation", "Procurement"]
+    },
+    {
+      "id": "ev-7",
+      "title": "Disposal Pickup Calendar",
+      "type": "report",
+      "content": "The pickup calendar shows staged collections for the next two weeks, with storage-room slots assigned to each vendor truck arrival.",
+      "relatedControls": ["ctrl-1", "ctrl-4"],
+      "tags": ["Calendar", "Pickup", "Planning"]
     }
   ],
   "issues": [

@@ -111,6 +111,14 @@
       "content": "The standard requires business approval, defined expiry, monitored privileged access, and prompt deprovisioning of third-party accounts.",
       "relatedControls": ["ctrl-1", "ctrl-2", "ctrl-3", "ctrl-4"],
       "tags": ["Policy", "Third Party", "Standard"]
+    },
+    {
+      "id": "ev-7",
+      "title": "Active Vendor Roster",
+      "type": "report",
+      "content": "The current vendor roster lists active third parties and their contract end dates, including a routine review marker for upcoming renewals.",
+      "relatedControls": ["ctrl-1", "ctrl-2"],
+      "tags": ["Roster", "Contracts", "Procurement"]
     }
   ],
   "issues": [

@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
+import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
 import { clearSaveData } from "../utils/saveData";
+import { playBackTone, playConfirmTone } from "../utils/audio";
 import {
   clearPracticeReplay,
   getCaseMasteryStats,
@@ -68,13 +70,41 @@ function getNextStepAdvice(score: number, missedCount: number, unsupportedCount:
 export function ResultsScene() {
   const setScene = useGameStore((state) => state.setScene);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
+  const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const availableCases = useAuditStore((state) => state.availableCases);
   const auditCase = useAuditStore((state) => state.auditCase);
   const finalScore = useAuditStore((state) => state.finalScore);
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
+  const [helpOpen, setHelpOpen] = useState(false);
   const didRecordRunRef = useRef<string | null>(null);
+
+  const openHelpOverlay = () => {
+    playConfirmTone(sfxVolume);
+    setHelpOpen(true);
+  };
+
+  const closeHelpOverlay = () => {
+    playBackTone(sfxVolume);
+    setHelpOpen(false);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (helpOpen) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "h" || event.key === "?") {
+        event.preventDefault();
+        openHelpOverlay();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [helpOpen, sfxVolume]);
 
   useEffect(() => {
     if (!finalScore) {
@@ -194,6 +224,13 @@ export function ResultsScene() {
             <strong>{finalScore.score}/100</strong>
             <span>{rank}</span>
           </div>
+          <button
+            type="button"
+            className="panel-chip panel-chip-button help-chip"
+            onClick={openHelpOverlay}
+          >
+            Help: H
+          </button>
         </div>
 
         <section className="terminal-panel report-summary-panel">
@@ -545,6 +582,41 @@ export function ResultsScene() {
             <span>Return to Main Menu</span>
           </button>
         </div>
+
+        {helpOpen && (
+          <SceneHelpOverlay
+            title="Report Review Guide"
+            intro="This screen breaks down what the audit taught you and gives you the quickest path back into the simulator."
+            actionLabel="Resume Review"
+            footer="Press Esc or use the resume button to close the guide."
+            sections={[
+              {
+                title: "Read The Score",
+                items: [
+                  "Matched issues show what your report captured successfully.",
+                  "Missed issues point to the control gaps and evidence you still need to notice.",
+                  "Unsupported findings tell you where the report moved ahead of the evidence.",
+                ],
+              },
+              {
+                title: "Next Actions",
+                items: [
+                  "Print the report if you want a formal closeout artifact.",
+                  "Return to the workstation to revisit the case manually.",
+                  "Use Practice Missed Issues to replay the gaps from this run.",
+                ],
+              },
+              {
+                title: "Study Tip",
+                items: [
+                  "Focus on the evidence trail behind each missed issue before starting the next case.",
+                  "The control summary on this screen is meant to guide your next replay.",
+                ],
+              },
+            ]}
+            onClose={closeHelpOverlay}
+          />
+        )}
       </div>
     </section>
   );
