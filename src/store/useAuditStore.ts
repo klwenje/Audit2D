@@ -3,6 +3,7 @@ import { auditCases, getAuditCase } from "../data/cases";
 import type { AuditCase, DraftFinding, Severity } from "../types/audit";
 import { scoreFindings, type ScoreBreakdown } from "../utils/scoring";
 import { normalizeRunDifficulty, type RunDifficulty } from "../utils/runDifficulty";
+import type { PracticeBrief } from "../utils/remediationDrill";
 
 type FindingDraftForm = {
   title: string;
@@ -19,6 +20,7 @@ export type AuditStateSnapshot = {
   runDifficulty: RunDifficulty;
   runVariantKey: string;
   practiceFocusIssueIds: string[];
+  practiceBrief: PracticeBrief | null;
   selectedEvidenceId: string;
   reviewedEvidenceIds: string[];
   discoveredEvidenceIds: string[];
@@ -38,6 +40,7 @@ type AuditState = {
   runDifficulty: RunDifficulty;
   runVariantKey: string;
   practiceFocusIssueIds: string[];
+  practiceBrief: PracticeBrief | null;
   selectedEvidenceId: string;
   reviewedEvidenceIds: string[];
   discoveredEvidenceIds: string[];
@@ -49,7 +52,12 @@ type AuditState = {
   finalScore: ScoreBreakdown | null;
   setSelectedCase: (caseId: string) => void;
   beginSelectedCase: (runDifficulty: RunDifficulty) => void;
-  beginPracticeCase: (caseId: string, focusIssueIds: string[], runDifficulty: RunDifficulty) => void;
+  beginPracticeCase: (
+    caseId: string,
+    focusIssueIds: string[],
+    runDifficulty: RunDifficulty,
+    practiceBrief?: PracticeBrief | null,
+  ) => void;
   hydrateFromSave: (snapshot: AuditStateSnapshot) => void;
   getSnapshot: () => AuditStateSnapshot;
   setWorkstationTab: (tab: AuditState["workstationTab"]) => void;
@@ -198,6 +206,7 @@ function createCaseRunState(
   runDifficulty: DifficultyMode,
   runVariantKey: string,
   focusIssueIds: string[] = [],
+  practiceBrief: PracticeBrief | null = null,
 ) {
   const validFocusIssueIds = focusIssueIds.filter((issueId) =>
     auditCase.issues.some((issue) => issue.id === issueId),
@@ -218,6 +227,7 @@ function createCaseRunState(
     runDifficulty,
     runVariantKey,
     practiceFocusIssueIds: validFocusIssueIds,
+    practiceBrief,
     selectedEvidenceId: firstEvidenceId,
     reviewedEvidenceIds: [],
     discoveredEvidenceIds: initialEvidenceIds,
@@ -271,6 +281,31 @@ function normalizeScoreBreakdown(score: ScoreBreakdown | null | undefined): Scor
   };
 }
 
+function normalizePracticeBrief(brief: PracticeBrief | null | undefined): PracticeBrief | null {
+  if (!brief || typeof brief.title !== "string" || typeof brief.summary !== "string") {
+    return null;
+  }
+
+  const actionItems = Array.isArray(brief.actionItems)
+    ? brief.actionItems.filter(
+        (item) =>
+          item &&
+          typeof item.title === "string" &&
+          typeof item.detail === "string" &&
+          (item.targetTab === "caseFile" ||
+            item.targetTab === "interviews" ||
+            item.targetTab === "evidence" ||
+            item.targetTab === "findings"),
+      )
+    : [];
+
+  return {
+    title: brief.title,
+    summary: brief.summary,
+    actionItems,
+  };
+}
+
 export const useAuditStore = create<AuditState>((set, get) => ({
   availableCases: auditCases,
   selectedCaseId: starterCase.id,
@@ -294,16 +329,18 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     set((state) => {
       const nextCase = getAuditCase(state.selectedCaseId);
       return {
-        selectedCaseId: nextCase.id,
-        ...createCaseRunState(
-          nextCase,
-          "standard",
-          normalizeRunDifficulty(runDifficulty),
-          createRunVariantKey(nextCase.id, "standard", []),
-        ),
-      };
-    }),
-  beginPracticeCase: (caseId, focusIssueIds, runDifficulty) =>
+      selectedCaseId: nextCase.id,
+      ...createCaseRunState(
+        nextCase,
+        "standard",
+        normalizeRunDifficulty(runDifficulty),
+        createRunVariantKey(nextCase.id, "standard", []),
+        [],
+        null,
+      ),
+    };
+  }),
+  beginPracticeCase: (caseId, focusIssueIds, runDifficulty, practiceBrief) =>
     set(() => {
       const nextCase = getAuditCase(caseId);
       return {
@@ -314,6 +351,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
           normalizeRunDifficulty(runDifficulty),
           createRunVariantKey(nextCase.id, "practice", focusIssueIds),
           focusIssueIds,
+          normalizePracticeBrief(practiceBrief),
         ),
       };
     }),
@@ -354,6 +392,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         practiceFocusIssueIds: snapshotPracticeFocusIssueIds.filter((issueId) =>
           runCase.issues.some((issue) => issue.id === issueId),
         ),
+        practiceBrief: normalizePracticeBrief(snapshot.practiceBrief),
         selectedEvidenceId: sanitizeEvidenceSelection(
           runCase,
           snapshot.selectedEvidenceId,
@@ -382,6 +421,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
       runDifficulty: state.runDifficulty,
       runVariantKey: state.runVariantKey,
       practiceFocusIssueIds: state.practiceFocusIssueIds,
+      practiceBrief: state.practiceBrief,
       selectedEvidenceId: state.selectedEvidenceId,
       reviewedEvidenceIds: state.reviewedEvidenceIds,
       discoveredEvidenceIds: state.discoveredEvidenceIds,
@@ -476,6 +516,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         runDifficulty: state.runDifficulty,
         runVariantKey: state.runVariantKey,
         practiceFocusIssueIds: state.practiceFocusIssueIds,
+        practiceBrief: state.practiceBrief,
         selectedEvidenceId: firstEvidenceId,
         reviewedEvidenceIds: [],
         discoveredEvidenceIds: initialEvidenceIds,

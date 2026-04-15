@@ -23,6 +23,7 @@ export function WorkstationScene() {
   const auditCase = useAuditStore((state) => state.auditCase);
   const runMode = useAuditStore((state) => state.runMode);
   const practiceFocusIssueIds = useAuditStore((state) => state.practiceFocusIssueIds);
+  const practiceBrief = useAuditStore((state) => state.practiceBrief);
   const selectedEvidenceId = useAuditStore((state) => state.selectedEvidenceId);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const discoveredEvidenceIds = useAuditStore((state) => state.discoveredEvidenceIds);
@@ -163,10 +164,10 @@ export function WorkstationScene() {
         {runMode === "practice" && (
           <section className="terminal-panel practice-banner">
             <p className="eyebrow">Practice Mode</p>
-            <h2>Retry Missed Control Areas</h2>
+            <h2>{practiceBrief?.title ?? "Retry Missed Control Areas"}</h2>
             <p className="mail-body">
-              This replay is focused on the issues you missed last time. Start with the case file,
-              then trace the evidence and interviews tied to those control gaps.
+              {practiceBrief?.summary ??
+                "This replay is focused on the issues you missed last time. Start with the case file, then trace the evidence and interviews tied to those control gaps."}
             </p>
             {practiceFocusIssues.length > 0 && (
               <ul className="bullet-list">
@@ -177,13 +178,41 @@ export function WorkstationScene() {
                 ))}
               </ul>
             )}
+            {practiceBrief && practiceBrief.actionItems.length > 0 && (
+              <div className="adaptive-drill-grid workstation-drill-grid">
+                {practiceBrief.actionItems.map((action, index) => (
+                  <article
+                    key={`${action.targetTab}:${index}`}
+                    className="study-review-card adaptive-drill-card"
+                  >
+                    <div className="mail-header">
+                      <strong>{action.title}</strong>
+                      <span>{action.targetTab}</span>
+                    </div>
+                    <p className="mail-body">{action.detail}</p>
+                    <button
+                      className="review-button"
+                      onClick={() => setWorkstationTab(action.targetTab)}
+                    >
+                      Open {action.targetTab}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
         <div className="workstation-console" aria-label="Case status summary">
           <div className="console-chip">
             <span className="console-label">Mode</span>
-            <strong>{runMode === "practice" ? "Practice Replay" : "Active Audit"}</strong>
+            <strong>
+              {runMode === "practice"
+                ? practiceBrief
+                  ? "Adaptive Drill"
+                  : "Practice Replay"
+                : "Active Audit"}
+            </strong>
           </div>
           <div className="console-chip">
             <span className="console-label">Inbox</span>

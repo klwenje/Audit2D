@@ -887,6 +887,25 @@ h1 {
   gap: 0.5rem;
 }
 
+.adaptive-drill-panel {
+  margin-top: 0.1rem;
+}
+
+.adaptive-drill-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.adaptive-drill-card {
+  border-color: rgba(157, 228, 176, 0.28);
+  background: rgba(8, 22, 15, 0.42);
+}
+
+.workstation-drill-grid {
+  margin-top: 0.4rem;
+}
+
 .help-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1450,6 +1469,7 @@ h1 {
   .workstation-topbar,
   .report-closeout-grid,
   .report-sheet-grid,
+  .adaptive-drill-grid,
   .career-stat-grid,
   .career-band-grid,
   .career-coverage-grid {

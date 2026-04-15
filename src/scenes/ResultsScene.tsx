@@ -5,6 +5,7 @@ import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
 import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
 import { CareerProgressPanel } from "../components/CareerProgressPanel";
 import { buildCaseCatalog } from "../utils/caseCatalog";
+import { buildAdaptivePracticeBrief } from "../utils/remediationDrill";
 import { clearSaveData } from "../utils/saveData";
 import { playBackTone, playConfirmTone } from "../utils/audio";
 import {
@@ -93,6 +94,7 @@ export function ResultsScene() {
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
+  const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
   const [helpOpen, setHelpOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
   const didRecordRunRef = useRef<string | null>(null);
@@ -221,6 +223,10 @@ export function ResultsScene() {
     unsupportedFindings.length,
     thinSupportedFindings.length,
   );
+  const adaptivePracticeBrief = useMemo(
+    () => buildAdaptivePracticeBrief(auditCase, finalScore, draftedFindings),
+    [auditCase, draftedFindings, finalScore],
+  );
   const caseMastery = getCaseMasteryStats(auditCase.id);
   const projectedRuns = caseMastery.timesPlayed + 1;
   const projectedBestScore =
@@ -289,6 +295,11 @@ export function ResultsScene() {
   const partiallyCoveredControlCount = controlCoverage.filter(
     (entry) => entry.matchedIssues.length > 0 && entry.missedIssues.length > 0,
   ).length;
+  const canStartAdaptiveDrill =
+    missedIssues.length > 0 ||
+    unsupportedFindings.length > 0 ||
+    thinSupportedFindings.length > 0 ||
+    finalScore.severityMismatches.length > 0;
 
   return (
     <section className="scene scene-results">
@@ -349,6 +360,28 @@ export function ResultsScene() {
               <span className="metric-label">Evidence Reviewed</span>
               <strong>{reviewedEvidenceIds.length}</strong>
             </article>
+          </div>
+        </section>
+
+        <section className="terminal-panel adaptive-drill-panel">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Adaptive Drill</p>
+              <h2>{adaptivePracticeBrief.title}</h2>
+            </div>
+            <div className="panel-chip">{adaptivePracticeBrief.actionItems.length} steps</div>
+          </div>
+          <p className="report-summary-copy">{adaptivePracticeBrief.summary}</p>
+          <div className="adaptive-drill-grid">
+            {adaptivePracticeBrief.actionItems.map((action, index) => (
+              <article key={`${action.targetTab}:${index}`} className="study-review-card adaptive-drill-card">
+                <div className="mail-header">
+                  <strong>{action.title}</strong>
+                  <span>{action.targetTab}</span>
+                </div>
+                <p className="mail-body">{action.detail}</p>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -748,22 +781,25 @@ export function ResultsScene() {
           <button
             className="menu-button"
             onClick={() => {
-              if (finalScore.missedIssueIds.length === 0) {
+              if (!canStartAdaptiveDrill) {
                 return;
               }
 
-              queuePracticeReplay(auditCase.id, finalScore.missedIssueIds, runDifficulty);
-              resetAuditProgress();
+              clearPracticeReplay();
+              beginPracticeCase(
+                auditCase.id,
+                finalScore.missedIssueIds,
+                runDifficulty,
+                adaptivePracticeBrief,
+              );
               resetOfficeState();
-              setScene("mainMenu");
+              setScene("office");
             }}
-            disabled={finalScore.missedIssueIds.length === 0}
+            disabled={!canStartAdaptiveDrill}
           >
             <span className="menu-indicator">&gt;</span>
             <span>
-              {finalScore.missedIssueIds.length > 0
-                ? `Practice Missed Issues (${finalScore.missedIssueIds.length})`
-                : "Practice Missed Issues"}
+              Start Adaptive Drill
             </span>
           </button>
           <button
