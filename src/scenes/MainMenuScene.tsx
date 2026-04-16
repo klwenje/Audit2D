@@ -47,6 +47,21 @@ function formatSavedAt(value: string) {
   }).format(date);
 }
 
+function formatIssueTrail(labels: string[], totalCount: number) {
+  if (totalCount === 0) {
+    return "No miss trail yet";
+  }
+
+  const preview = labels.slice(0, 3);
+  const remainingCount = Math.max(0, totalCount - preview.length);
+
+  if (preview.length === 0) {
+    return `${totalCount} issue${totalCount === 1 ? "" : "s"} recorded`;
+  }
+
+  return remainingCount > 0 ? `${preview.join(", ")} +${remainingCount} more` : preview.join(", ");
+}
+
 export function MainMenuScene() {
   const setScene = useGameStore((state) => state.setScene);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
@@ -91,6 +106,9 @@ export function MainMenuScene() {
         .filter(Boolean),
     [selectedCase, selectedCaseStudy.lastMissedIssueIds],
   );
+  const selectedCaseMissedIssueCount = selectedCaseStudy.lastMissedIssueIds.length;
+  const selectedCaseReplayReady = selectedCaseMissedIssueCount > 0;
+  const selectedCaseIssueTrail = formatIssueTrail(selectedCaseFocusLabels, selectedCaseMissedIssueCount);
   const strongestCaseLabel = useMemo(() => {
     const strongestCase = studyMomentum.strongestCase;
     if (!strongestCase) {
@@ -274,7 +292,7 @@ export function MainMenuScene() {
           </div>
           <p className="scene-copy small">
             {studyMomentum.totalRuns} total runs, {averageBestScoreLabel} average best score, and{" "}
-            {studyMomentum.replayReadyCases} cases ready for targeted replay.
+            {studyMomentum.replayReadyCases} cases with a live miss trail for focused replay.
           </p>
           <div className="progress-summary-grid">
             <article className="progress-summary-card">
@@ -478,23 +496,41 @@ export function MainMenuScene() {
             </article>
             <article className="study-stat">
               <span className="metric-label">Last Misses</span>
-              <strong>{selectedCaseStudy.lastMissedIssueIds.length}</strong>
+              <strong>{selectedCaseMissedIssueCount}</strong>
             </article>
           </div>
-          {selectedCaseFocusLabels.length > 0 ? (
-            <section className="practice-focus-panel" aria-label="Practice focus">
-              <p className="eyebrow">Practice Focus</p>
-              <p className="scene-copy small">{selectedCaseFocusLabels.join(", ")}</p>
-              <button className="menu-button practice-button" onClick={startPracticeReplay}>
-                <span className="menu-indicator">&gt;</span>
-                <span>Practice Missed Issues</span>
-              </button>
-            </section>
-          ) : (
-            <p className="scene-copy small practice-empty">
-              Complete a run to unlock targeted replay for this case.
+          <section className="practice-focus-panel" aria-label="Targeted replay">
+            <div className="artifact-panel-header">
+              <div>
+                <p className="eyebrow">Targeted Replay</p>
+                <h2>{selectedCaseReplayReady ? "Replay the miss trail" : "Replay locked until a miss trail exists"}</h2>
+              </div>
+              <div className="panel-chip">{selectedCaseReplayReady ? "Replay Ready" : "Locked"}</div>
+            </div>
+            <p className="scene-copy small">
+              {selectedCaseReplayReady
+                ? `This case is replay-ready because the last recorded run missed ${selectedCaseMissedIssueCount} issue${selectedCaseMissedIssueCount === 1 ? "" : "s"}.`
+                : "Targeted replay unlocks after a run records misses. Finish one pass, and this panel will point you back to the exact gaps."}
             </p>
-          )}
+            {selectedCaseReplayReady ? (
+              <div className="practice-focus-pills" aria-label="Missed issue focus">
+                <span className="panel-chip">Focus: {selectedCaseIssueTrail}</span>
+              </div>
+            ) : null}
+            <p className="scene-copy small practice-replay-note">
+              {selectedCaseReplayReady
+                ? "The next replay will reopen this case at the selected difficulty and keep the miss trail front and center."
+                : "Use the first run to seed the archive, then come back here to launch a focused retry."}
+            </p>
+            <button
+              className="menu-button selected practice-button"
+              onClick={startPracticeReplay}
+              disabled={!selectedCaseReplayReady}
+            >
+              <span className="menu-indicator">&gt;</span>
+              <span>{selectedCaseReplayReady ? "Launch Focused Replay" : "Replay Locked"}</span>
+            </button>
+          </section>
         </section>
         {practiceReplaySession ? (
           <section className="practice-banner" aria-live="polite">
@@ -504,7 +540,7 @@ export function MainMenuScene() {
               Focus mode is reloading this case with {practiceReplaySession.focusIssueIds.length} missed issue
               {practiceReplaySession.focusIssueIds.length === 1 ? "" : "s"} highlighted for review on{" "}
               {runDifficultyOptions.find((option) => option.id === practiceReplaySession.runDifficulty)?.label ??
-                "Normal"}.
+                "Normal"} so the next pass stays anchored to the same control gaps.
             </p>
           </section>
         ) : null}

@@ -43,6 +43,82 @@ function getEvidenceArtifactLabel(type: string) {
   return "Case Record";
 }
 
+type PracticeReplayTargetTab = "caseFile" | "interviews" | "evidence" | "findings";
+
+type PracticeReplayFocus = {
+  title: string;
+  detail: string;
+  targetTab: PracticeReplayTargetTab;
+  evidenceId?: string;
+};
+
+const DEFAULT_PRACTICE_REPLAY_FOCUS: PracticeReplayFocus = {
+  title: "Review the case file",
+  detail: "Start by checking the scope memo and working outward through the evidence trail.",
+  targetTab: "caseFile",
+};
+
+function getPracticeReplayTabLabel(tab: PracticeReplayTargetTab) {
+  switch (tab) {
+    case "caseFile":
+      return "Case File";
+    case "interviews":
+      return "Interviews";
+    case "evidence":
+      return "Evidence";
+    case "findings":
+      return "Findings";
+  }
+}
+
+function buildPracticeReplayFocus(
+  auditCase: {
+    evidence: Array<{ id: string; title: string }>;
+    interviewPrompts: Array<{ stakeholderId: string; revealsEvidenceIds?: string[] }>;
+    stakeholders: Array<{ id: string; name: string }>;
+  },
+  issue: { title: string; relatedEvidence: string[] },
+): PracticeReplayFocus {
+  const relatedEvidenceItems = issue.relatedEvidence
+    .map((evidenceId) => auditCase.evidence.find((item) => item.id === evidenceId))
+    .filter((item): item is { id: string; title: string } => Boolean(item));
+  const relatedPrompts = auditCase.interviewPrompts.filter((prompt) =>
+    prompt.revealsEvidenceIds?.some((evidenceId) => issue.relatedEvidence.includes(evidenceId)),
+  );
+  const relatedStakeholder = relatedPrompts
+    .map((prompt) => auditCase.stakeholders.find((stakeholder) => stakeholder.id === prompt.stakeholderId)?.name)
+    .find((name): name is string => Boolean(name));
+
+  if (relatedPrompts.length > 0) {
+    return {
+      title: `Ask ${relatedStakeholder ?? "the stakeholder team"}`,
+      detail:
+        relatedEvidenceItems.length > 0
+          ? `Use interviews to unlock ${relatedEvidenceItems.slice(0, 2).map((item) => item.title).join(", ")} and revisit ${issue.title}.`
+          : `Use interviews to unlock the control story behind ${issue.title}.`,
+      targetTab: "interviews",
+    };
+  }
+
+  if (relatedEvidenceItems.length > 0) {
+    return {
+      title: `Inspect ${relatedEvidenceItems[0].title}`,
+      detail:
+        relatedEvidenceItems.length > 1
+          ? `Open the evidence locker and cross-check ${relatedEvidenceItems.slice(0, 2).map((item) => item.title).join(", ")} against ${issue.title}.`
+          : `Open the evidence locker and inspect the artifact tied to ${issue.title}.`,
+      targetTab: "evidence",
+      evidenceId: relatedEvidenceItems[0].id,
+    };
+  }
+
+  return {
+    title: "Revisit the case file",
+    detail: `Return to the scope memo and control story for ${issue.title} before drafting again.`,
+    targetTab: "caseFile",
+  };
+}
+
 export function WorkstationScene() {
   const setScene = useGameStore((state) => state.setScene);
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
@@ -155,6 +231,36 @@ export function WorkstationScene() {
   const practiceFocusIssues = auditCase.issues.filter((issue) =>
     practiceFocusIssueIds.includes(issue.id),
   );
+  const practiceFocusAction = useMemo(() => {
+    const primaryAction = practiceBrief?.actionItems?.[0];
+
+    if (primaryAction) {
+      return {
+        title: primaryAction.title,
+        detail: primaryAction.detail,
+        targetTab: primaryAction.targetTab,
+      } satisfies PracticeReplayFocus;
+    }
+
+    if (practiceFocusIssues.length > 0) {
+      return buildPracticeReplayFocus(
+        {
+          evidence: auditCase.evidence,
+          interviewPrompts: auditCase.interviewPrompts,
+          stakeholders: auditCase.stakeholders,
+        },
+        practiceFocusIssues[0],
+      );
+    }
+
+    return DEFAULT_PRACTICE_REPLAY_FOCUS;
+  }, [
+    auditCase.evidence,
+    auditCase.interviewPrompts,
+    auditCase.stakeholders,
+    practiceBrief?.actionItems,
+    practiceFocusIssues,
+  ]);
 
   const reviewedCount = visibleEvidence.filter((item) => reviewedEvidenceIds.includes(item.id)).length;
   const askedInterviewCount = auditCase.interviewPrompts.filter((prompt) =>
@@ -191,23 +297,75 @@ export function WorkstationScene() {
 
         {runMode === "practice" && (
           <section className="terminal-panel practice-banner">
-            <p className="eyebrow">Practice Mode</p>
-            <h2>{practiceBrief?.title ?? "Retry Missed Control Areas"}</h2>
+            <div className="artifact-panel-header">
+              <div>
+                <p className="eyebrow">Practice Mode</p>
+                <h2>{practiceBrief?.title ?? "Retry Missed Control Areas"}</h2>
+              </div>
+              <div className="panel-chip">Targeted Replay</div>
+            </div>
             <p className="mail-body">
               {practiceBrief?.summary ??
-                "This replay is focused on the issues you missed last time. Start with the case file, then trace the evidence and interviews tied to those control gaps."}
+                "This replay is focused on the issues you missed last time. Start with the guided route below, then trace the evidence and interviews tied to those control gaps."}
             </p>
-            {practiceFocusIssues.length > 0 && (
-              <ul className="bullet-list">
-                {practiceFocusIssues.map((issue) => (
-                  <li key={issue.id}>
-                    <strong>{issue.title}</strong> - {issue.severity}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="replay-focus-shell">
+              <article className="study-review-card replay-focus-card">
+                <div className="mail-header">
+                  <strong>{practiceFocusAction.title}</strong>
+                  <span>{getPracticeReplayTabLabel(practiceFocusAction.targetTab)}</span>
+                </div>
+                <p className="mail-body">{practiceFocusAction.detail}</p>
+                <button
+                  className="review-button"
+                  onClick={() => {
+                    if (practiceFocusAction.evidenceId) {
+                      selectEvidence(practiceFocusAction.evidenceId);
+                    }
+
+                    setWorkstationTab(practiceFocusAction.targetTab);
+                  }}
+                >
+                  Open {getPracticeReplayTabLabel(practiceFocusAction.targetTab)}
+                </button>
+              </article>
+
+              <article className="study-review-card replay-focus-card">
+                <div className="mail-header">
+                  <strong>Missed issues</strong>
+                  <span>{practiceFocusIssues.length}</span>
+                </div>
+                {practiceFocusIssues.length > 0 ? (
+                  <ul className="bullet-list replay-issue-list">
+                    {practiceFocusIssues.map((issue) => {
+                      const issueReplay = buildPracticeReplayFocus(
+                        {
+                          evidence: auditCase.evidence,
+                          interviewPrompts: auditCase.interviewPrompts,
+                          stakeholders: auditCase.stakeholders,
+                        },
+                        issue,
+                      );
+
+                      return (
+                        <li key={issue.id} className="replay-issue-item">
+                          <div>
+                            <strong>{issue.title}</strong>
+                            <span>{issue.severity}</span>
+                          </div>
+                          <p>{issueReplay.detail}</p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="terminal-muted">
+                    No replay issues were queued, so this run is using the broader learning path.
+                  </p>
+                )}
+              </article>
+            </div>
             {practiceBrief && practiceBrief.actionItems.length > 0 && (
-              <div className="adaptive-drill-grid workstation-drill-grid">
+              <div className="replay-action-grid workstation-drill-grid">
                 {practiceBrief.actionItems.map((action, index) => (
                   <article
                     key={`${action.targetTab}:${index}`}
@@ -220,9 +378,11 @@ export function WorkstationScene() {
                     <p className="mail-body">{action.detail}</p>
                     <button
                       className="review-button"
-                      onClick={() => setWorkstationTab(action.targetTab)}
+                      onClick={() => {
+                        setWorkstationTab(action.targetTab);
+                      }}
                     >
-                      Open {action.targetTab}
+                      Open {getPracticeReplayTabLabel(action.targetTab)}
                     </button>
                   </article>
                 ))}

@@ -28,6 +28,21 @@ function getLatestRunDifficultyLabel(runDifficulty: string | undefined) {
   return runDifficultyOptions.find((option) => option.id === runDifficulty)?.label ?? "Normal";
 }
 
+function formatIssueTrail(labels: string[], totalCount: number) {
+  if (totalCount === 0) {
+    return "No miss trail yet";
+  }
+
+  const preview = labels.slice(0, 3);
+  const remainingCount = Math.max(0, totalCount - preview.length);
+
+  if (preview.length === 0) {
+    return `${totalCount} issue${totalCount === 1 ? "" : "s"} recorded`;
+  }
+
+  return remainingCount > 0 ? `${preview.join(", ")} +${remainingCount} more` : preview.join(", ");
+}
+
 export function PortfolioScene() {
   const setScene = useGameStore((state) => state.setScene);
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
@@ -69,6 +84,9 @@ export function PortfolioScene() {
         .filter(Boolean),
     [selectedCase, selectedCaseStudy.lastMissedIssueIds],
   );
+  const selectedCaseMissedIssueCount = selectedCaseStudy.lastMissedIssueIds.length;
+  const selectedCaseReplayReady = selectedCaseMissedIssueCount > 0;
+  const selectedCaseIssueTrail = formatIssueTrail(selectedCaseFocusLabels, selectedCaseMissedIssueCount);
   const strongestCaseLabel = useMemo(() => {
     const strongestCase = studyMomentum.strongestCase;
     if (!strongestCase) {
@@ -203,7 +221,7 @@ export function PortfolioScene() {
               <p className="scene-copy small">
                 {studyMomentum.totalRuns} total runs, {averageBestScoreLabel} average best score, and a
                 {studyMomentum.casesTouched > 0 ? " visible" : " growing"} archive trail across {activeCoverage} covered
-                families.
+                families. Replay-ready cases are the ones with a stored miss trail.
               </p>
               <div className="portfolio-preview-grid">
                 <article className="portfolio-preview-card">
@@ -287,19 +305,32 @@ export function PortfolioScene() {
                 </article>
                 <article className="portfolio-spotlight-stat">
                   <span className="metric-label">Missed Issues</span>
-                  <strong>{selectedCaseStudy.lastMissedIssueIds.length}</strong>
+                  <strong>{selectedCaseMissedIssueCount}</strong>
                 </article>
               </div>
-              {selectedCaseFocusLabels.length > 0 ? (
-                <div className="portfolio-focus-block">
-                  <p className="eyebrow">Next Study Focus</p>
-                  <p className="scene-copy small">{selectedCaseFocusLabels.join(", ")}</p>
+              <div className="portfolio-focus-block">
+                <div className="artifact-panel-header">
+                  <div>
+                    <p className="eyebrow">Targeted Replay</p>
+                    <h3>{selectedCaseReplayReady ? "Replay the miss trail" : "Replay locked until a miss trail exists"}</h3>
+                  </div>
+                  <div className="panel-chip">{selectedCaseReplayReady ? "Replay Ready" : "Locked"}</div>
                 </div>
-              ) : (
                 <p className="scene-copy small">
-                  Complete a run here to populate a targeted replay and deepen this case dossier.
+                  {selectedCaseReplayReady
+                    ? `This case is replay-ready because the last recorded run missed ${selectedCaseMissedIssueCount} issue${selectedCaseMissedIssueCount === 1 ? "" : "s"}.`
+                    : "Targeted replay unlocks after a run records misses. Finish one pass, and the archive will point you back to the exact gaps."}
                 </p>
-              )}
+                {selectedCaseReplayReady ? (
+                  <p className="scene-copy small portfolio-focus-copy">
+                    Miss trail: {selectedCaseIssueTrail}
+                  </p>
+                ) : (
+                  <p className="scene-copy small portfolio-focus-copy">
+                    No miss trail yet. Run this case once, then the archive will surface a focused retry here.
+                  </p>
+                )}
+              </div>
               {selectedCaseRuns.length > 0 ? (
                 <div className="portfolio-mini-run-list" aria-label="Selected case run tape">
                   {selectedCaseRuns.slice(0, 3).map((run) => (
@@ -325,12 +356,10 @@ export function PortfolioScene() {
                   type="button"
                   className="menu-button selected"
                   onClick={() => startPracticeReplay(selectedCase.id)}
-                  disabled={selectedCaseStudy.lastMissedIssueIds.length === 0}
+                  disabled={!selectedCaseReplayReady}
                 >
                   <span className="menu-indicator">&gt;</span>
-                  <span>
-                    {selectedCaseStudy.lastMissedIssueIds.length > 0 ? "Practice Missed Issues" : "No Practice Replay Yet"}
-                  </span>
+                  <span>{selectedCaseReplayReady ? "Launch Focused Replay" : "Replay Locked"}</span>
                 </button>
               </div>
             </section>
@@ -396,6 +425,7 @@ export function PortfolioScene() {
             {caseCatalog.map((auditCase) => {
               const caseStudy = getCaseMasteryStats(auditCase.id);
               const latestRun = recentRunByCase.get(auditCase.id) ?? null;
+              const caseReplayReady = caseStudy.lastMissedIssueIds.length > 0;
               const caseMissLabels = caseStudy.lastMissedIssueIds
                 .map((issueId) => auditCase.issues.find((issue) => issue.id === issueId)?.title ?? issueId)
                 .filter(Boolean)
@@ -424,31 +454,28 @@ export function PortfolioScene() {
                     <span>Last played: {caseStudy.lastPlayedAt ? formatTimestamp(caseStudy.lastPlayedAt) : "Never"}</span>
                     <span>Missed: {caseStudy.lastMissedIssueIds.length}</span>
                   </div>
-                  {caseMissLabels.length > 0 ? (
+                  {caseReplayReady ? (
                     <p className="scene-copy small portfolio-ledger-focus">
-                      Last misses: {caseMissLabels.join(", ")}
-                      {caseStudy.lastMissedIssueIds.length > caseMissLabels.length
-                        ? ` +${caseStudy.lastMissedIssueIds.length - caseMissLabels.length} more`
-                        : ""}
+                      Replay ready. Miss trail: {formatIssueTrail(caseMissLabels, caseStudy.lastMissedIssueIds.length)}
                     </p>
                   ) : (
                     <p className="scene-copy small portfolio-ledger-focus">
-                      No miss trail yet. This case is ready for a first pass.
+                      Replay locked. Run this case once to seed a miss trail and unlock a focused retry.
                     </p>
                   )}
                   <div className="portfolio-ledger-actions">
                     <button type="button" className="menu-button" onClick={() => openCaseInMenu(auditCase.id)}>
                       <span className="menu-indicator">&gt;</span>
-                      <span>Focus in Menu</span>
+                      <span>Open in Menu</span>
                     </button>
                     <button
                       type="button"
                       className="menu-button selected"
                       onClick={() => startPracticeReplay(auditCase.id)}
-                      disabled={caseStudy.lastMissedIssueIds.length === 0}
+                      disabled={!caseReplayReady}
                     >
                       <span className="menu-indicator">&gt;</span>
-                      <span>{caseStudy.lastMissedIssueIds.length > 0 ? "Practice Missed" : "Practice Locked"}</span>
+                      <span>{caseReplayReady ? "Launch Focused Replay" : "Replay Locked"}</span>
                     </button>
                   </div>
                 </article>

@@ -13,9 +13,31 @@ import {
   getCareerProgressSummary,
   getCaseMasteryStats,
   getStudyMomentumSummary,
-  queuePracticeReplay,
   recordCaseStudyRun,
 } from "../utils/studyProgress";
+
+type ReplayTargetTab = "caseFile" | "interviews" | "evidence" | "findings";
+
+type ReplayActionCard = {
+  title: string;
+  detail: string;
+  targetTab: ReplayTargetTab;
+  evidenceId?: string;
+  buttonLabel: string;
+};
+
+type ReplayIssueContext = {
+  evidence: Array<{ id: string; title: string }>;
+  prompts: Array<{ stakeholderId: string; revealsEvidenceIds?: string[] }>;
+  stakeholders: Array<{ id: string; name: string }>;
+};
+
+const REPLAY_TAB_LABELS: Record<ReplayTargetTab, string> = {
+  caseFile: "Case File",
+  interviews: "Interviews",
+  evidence: "Evidence",
+  findings: "Findings",
+};
 
 function getRank(score: number) {
   if (score >= 85) return "Audit Lead";
@@ -93,6 +115,70 @@ function getNextStepAdvice(
   return "Focus on severity calibration. Compare business impact, frequency, and control breakdown so your ratings match the actual risk story.";
 }
 
+function getReplayTabLabel(tab: ReplayTargetTab) {
+  return REPLAY_TAB_LABELS[tab];
+}
+
+function buildIssueReplayAction(
+  auditCase: ReplayIssueContext,
+  issue: { title: string; relatedEvidence: string[] },
+): ReplayActionCard {
+  const relatedEvidenceItems = issue.relatedEvidence
+    .map((evidenceId) => auditCase.evidence.find((item) => item.id === evidenceId))
+    .filter((item): item is { id: string; title: string } => Boolean(item));
+  const relatedPrompts = auditCase.prompts.filter((prompt) =>
+    prompt.revealsEvidenceIds?.some((evidenceId) => issue.relatedEvidence.includes(evidenceId)),
+  );
+  const relatedStakeholders = Array.from(
+    new Set(
+      relatedPrompts
+        .map(
+          (prompt) =>
+            auditCase.stakeholders.find((stakeholder) => stakeholder.id === prompt.stakeholderId)?.name,
+        )
+        .filter((name): name is string => Boolean(name)),
+    ),
+  );
+
+  if (relatedPrompts.length > 0) {
+    return {
+      title: `Ask ${relatedStakeholders[0] ?? "the stakeholder team"}`,
+      detail:
+        relatedEvidenceItems.length > 0
+          ? `Use interviews to unlock ${relatedEvidenceItems
+              .slice(0, 2)
+              .map((item) => item.title)
+              .join(", ")} and revisit ${issue.title}.`
+          : `Use interviews to unlock the control story behind ${issue.title}.`,
+      targetTab: "interviews",
+      buttonLabel: "Open interviews",
+    };
+  }
+
+  if (relatedEvidenceItems.length > 0) {
+    return {
+      title: `Inspect ${relatedEvidenceItems[0].title}`,
+      detail:
+        relatedEvidenceItems.length > 1
+          ? `Open the evidence locker and cross-check ${relatedEvidenceItems
+              .slice(0, 2)
+              .map((item) => item.title)
+              .join(", ")} against ${issue.title}.`
+          : `Open the evidence locker and inspect the artifact tied to ${issue.title}.`,
+      targetTab: "evidence",
+      evidenceId: relatedEvidenceItems[0].id,
+      buttonLabel: "Open evidence",
+    };
+  }
+
+  return {
+    title: "Revisit the case file",
+    detail: `Return to the scope memo and control story for ${issue.title} before drafting again.`,
+    targetTab: "caseFile",
+    buttonLabel: "Open case file",
+  };
+}
+
 export function ResultsScene() {
   const setScene = useGameStore((state) => state.setScene);
   const resetOfficeState = useGameStore((state) => state.resetOfficeState);
@@ -106,6 +192,8 @@ export function ResultsScene() {
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
   const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
+  const setWorkstationTab = useAuditStore((state) => state.setWorkstationTab);
+  const selectEvidence = useAuditStore((state) => state.selectEvidence);
   const [helpOpen, setHelpOpen] = useState(false);
   const [pauseOpen, setPauseOpen] = useState(false);
   const didRecordRunRef = useRef<string | null>(null);
@@ -317,6 +405,81 @@ export function ResultsScene() {
   const partiallyCoveredControlCount = controlCoverage.filter(
     (entry) => entry.matchedIssues.length > 0 && entry.missedIssues.length > 0,
   ).length;
+  const replayActionCards = useMemo(() => {
+    const issueCards = missedIssues.slice(0, 3).map((issue) =>
+      buildIssueReplayAction(
+        {
+          evidence: auditCase.evidence,
+          prompts: auditCase.interviewPrompts,
+          stakeholders: auditCase.stakeholders,
+        },
+        issue,
+      ),
+    );
+
+    if (issueCards.length > 0) {
+      return issueCards;
+    }
+
+    if (unsupportedFindings.length > 0) {
+      return [
+        {
+          title: "Tighten unsupported findings",
+          detail:
+            "Go back to the findings tab and anchor each claim to a concrete artifact before you resubmit.",
+          targetTab: "findings" as const,
+          buttonLabel: "Open findings",
+        },
+      ];
+    }
+
+    if (thinSupportedFindings.length > 0) {
+      return [
+        {
+          title: "Strengthen thin evidence links",
+          detail:
+            "Use the findings tab to reconnect the report to the exact artifacts that justify each claim.",
+          targetTab: "findings" as const,
+          buttonLabel: "Open findings",
+        },
+      ];
+    }
+
+    if (memoSparseFindings.length > 0 || memoDevelopingFindings.length > 0) {
+      return [
+        {
+          title: "Rebuild the memo frame",
+          detail:
+            "Return to the findings tab and complete the condition, criteria, cause, effect, and recommendation structure.",
+          targetTab: "findings" as const,
+          buttonLabel: "Open findings",
+        },
+      ];
+    }
+
+    return [
+      {
+        title: "Review the case file",
+        detail: "Re-open the case file and compare the control scope against your final report.",
+        targetTab: "caseFile" as const,
+        buttonLabel: "Open case file",
+      },
+    ];
+  }, [
+    auditCase.evidence,
+    auditCase.interviewPrompts,
+    auditCase.stakeholders,
+    memoDevelopingFindings.length,
+    memoSparseFindings.length,
+    missedIssues,
+    thinSupportedFindings.length,
+    unsupportedFindings.length,
+  ]);
+  const primaryReplayAction = replayActionCards[0];
+  const replayRouteLabel = replayActionCards
+    .map((action) => getReplayTabLabel(action.targetTab))
+    .filter((label, index, labels) => labels.indexOf(label) === index)
+    .join(" → ");
   const canStartAdaptiveDrill =
     missedIssues.length > 0 ||
     unsupportedFindings.length > 0 ||
@@ -399,12 +562,68 @@ export function ResultsScene() {
         <section className="terminal-panel adaptive-drill-panel">
           <div className="artifact-panel-header">
             <div>
-              <p className="eyebrow">Adaptive Drill</p>
+              <p className="eyebrow">Targeted Replay</p>
               <h2>{adaptivePracticeBrief.title}</h2>
             </div>
             <div className="panel-chip">{adaptivePracticeBrief.actionItems.length} steps</div>
           </div>
           <p className="report-summary-copy">{adaptivePracticeBrief.summary}</p>
+          <div className="replay-focus-panel">
+            <div className="replay-focus-copy">
+              <p className="scene-copy small">
+                {missedIssues.length > 0
+                  ? `Replay focus: ${missedIssues.length} missed issue${missedIssues.length === 1 ? "" : "s"} and the evidence trail behind them.`
+                  : "Replay focus: tighten evidence support and memo framing before the next closeout."}
+              </p>
+              <p className="replay-route-label">
+                Next route: {replayRouteLabel || "Findings"}
+              </p>
+            </div>
+            <button
+              className="menu-button selected replay-launch-button"
+              onClick={() => {
+                if (!primaryReplayAction) {
+                  return;
+                }
+
+                if (primaryReplayAction.evidenceId) {
+                  selectEvidence(primaryReplayAction.evidenceId);
+                }
+
+                clearPracticeReplay();
+                setWorkstationTab(primaryReplayAction.targetTab);
+                setScene("workstation");
+              }}
+            >
+              <span className="menu-indicator">&gt;</span>
+              <span>{primaryReplayAction ? `Resume ${getReplayTabLabel(primaryReplayAction.targetTab)}` : "Resume Workstation"}</span>
+            </button>
+          </div>
+          <div className="replay-action-grid">
+            {replayActionCards.map((action, index) => (
+              <article key={`${action.targetTab}:${action.title}:${index}`} className="study-review-card replay-action-card">
+                <div className="mail-header">
+                  <strong>{action.title}</strong>
+                  <span>{getReplayTabLabel(action.targetTab)}</span>
+                </div>
+                <p className="mail-body">{action.detail}</p>
+                <button
+                  className="review-button"
+                  onClick={() => {
+                    if (action.evidenceId) {
+                      selectEvidence(action.evidenceId);
+                    }
+
+                    clearPracticeReplay();
+                    setWorkstationTab(action.targetTab);
+                    setScene("workstation");
+                  }}
+                >
+                  {action.buttonLabel}
+                </button>
+              </article>
+            ))}
+          </div>
           <div className="adaptive-drill-grid">
             {adaptivePracticeBrief.actionItems.map((action, index) => (
               <article key={`${action.targetTab}:${index}`} className="study-review-card adaptive-drill-card">
@@ -695,32 +914,65 @@ export function ResultsScene() {
               {missedIssues.length > 0 ? (
                 missedIssues.map((issue) => (
                   <article key={issue.id} className="study-review-card">
-                    <div className="mail-header">
-                      <strong>{issue.title}</strong>
-                      <span>{issue.severity}</span>
-                    </div>
-                    <p className="mail-body">{issue.description}</p>
-                    <p className="terminal-muted">
-                      Recommendation: {issue.recommendation}
-                    </p>
-                    <p className="terminal-muted">
-                      Evidence to notice:{" "}
-                      {issue.relatedEvidence
-                        .map((evidenceId) => auditCase.evidence.find((entry) => entry.id === evidenceId)?.title ?? evidenceId)
-                        .join(", ")}
-                    </p>
-                    <p className="terminal-muted">
-                      Controls touched:{" "}
-                      {Array.from(
-                        new Set(
-                          issue.relatedEvidence.flatMap((evidenceId) =>
-                            auditCase.evidence.find((entry) => entry.id === evidenceId)?.relatedControls ?? [],
-                          ),
-                        ),
-                      )
-                        .map((controlId) => auditCase.controls.find((entry) => entry.id === controlId)?.name ?? controlId)
-                        .join(", ")}
-                    </p>
+                    {(() => {
+                      const issueAction = buildIssueReplayAction(
+                        {
+                          evidence: auditCase.evidence,
+                          prompts: auditCase.interviewPrompts,
+                          stakeholders: auditCase.stakeholders,
+                        },
+                        issue,
+                      );
+
+                      return (
+                        <>
+                          <div className="mail-header">
+                            <strong>{issue.title}</strong>
+                            <span>{issue.severity}</span>
+                          </div>
+                          <p className="mail-body">{issue.description}</p>
+                          <p className="terminal-muted">
+                            Recommendation: {issue.recommendation}
+                          </p>
+                          <p className="terminal-muted">
+                            Evidence to notice:{" "}
+                            {issue.relatedEvidence
+                              .map((evidenceId) => auditCase.evidence.find((entry) => entry.id === evidenceId)?.title ?? evidenceId)
+                              .join(", ")}
+                          </p>
+                          <p className="terminal-muted">
+                            Controls touched:{" "}
+                            {Array.from(
+                              new Set(
+                                issue.relatedEvidence.flatMap((evidenceId) =>
+                                  auditCase.evidence.find((entry) => entry.id === evidenceId)?.relatedControls ?? [],
+                                ),
+                              ),
+                            )
+                              .map((controlId) => auditCase.controls.find((entry) => entry.id === controlId)?.name ?? controlId)
+                              .join(", ")}
+                          </p>
+                          <div className="replay-issue-actions">
+                            <span className="replay-issue-hint">
+                              Next step: {getReplayTabLabel(issueAction.targetTab)}
+                            </span>
+                            <button
+                              className="review-button"
+                              onClick={() => {
+                                if (issueAction.evidenceId) {
+                                  selectEvidence(issueAction.evidenceId);
+                                }
+                                clearPracticeReplay();
+                                setWorkstationTab(issueAction.targetTab);
+                                setScene("workstation");
+                              }}
+                            >
+                              {issueAction.buttonLabel}
+                            </button>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </article>
                 ))
               ) : (
@@ -886,11 +1138,17 @@ export function ResultsScene() {
             className="menu-button"
             onClick={() => {
               clearPracticeReplay();
+              if (primaryReplayAction?.evidenceId) {
+                selectEvidence(primaryReplayAction.evidenceId);
+              }
+              if (primaryReplayAction) {
+                setWorkstationTab(primaryReplayAction.targetTab);
+              }
               setScene("workstation");
             }}
           >
             <span className="menu-indicator">&lt;</span>
-            <span>Back to Workstation</span>
+            <span>Resume Workstation</span>
           </button>
           <button
             className="menu-button"
@@ -912,9 +1170,7 @@ export function ResultsScene() {
             disabled={!canStartAdaptiveDrill}
           >
             <span className="menu-indicator">&gt;</span>
-            <span>
-              Start Adaptive Drill
-            </span>
+            <span>Launch Targeted Replay</span>
           </button>
           <button
             className="menu-button selected"

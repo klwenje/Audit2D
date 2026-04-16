@@ -105,6 +105,69 @@ function createLegacyVariantKey(caseId: string, runMode: RunMode, focusIssueIds:
   return `${caseId}:${runMode}:${focusKey}`;
 }
 
+function formatBriefList(values: string[], limit = 2) {
+  return values.slice(0, limit).join(", ");
+}
+
+function buildFallbackPracticeBrief(auditCase: AuditCase, focusIssueIds: string[]): PracticeBrief {
+  const focusIssues = auditCase.issues.filter((issue) => focusIssueIds.includes(issue.id));
+  const focusIssueTitles = focusIssues.map((issue) => issue.title).filter(Boolean);
+  const focusEvidenceTitles = Array.from(new Set(focusIssues.flatMap((issue) => issue.relatedEvidence)))
+    .map((evidenceId) => auditCase.evidence.find((evidence) => evidence.id === evidenceId)?.title ?? evidenceId)
+    .filter(Boolean);
+  const interviewStakeholders = Array.from(
+    new Set(
+      focusIssues.flatMap((issue) =>
+        auditCase.interviewPrompts
+          .filter((prompt) =>
+            prompt.revealsEvidenceIds?.some((evidenceId) => issue.relatedEvidence.includes(evidenceId)),
+          )
+          .map((prompt) => auditCase.stakeholders.find((stakeholder) => stakeholder.id === prompt.stakeholderId)?.name)
+          .filter((name): name is string => Boolean(name)),
+      ),
+    ),
+  );
+
+  return {
+    title: `Targeted Replay: ${auditCase.title}`,
+    summary:
+      focusIssueTitles.length > 0
+        ? `This replay focuses on ${formatBriefList(focusIssueTitles)}. Start in the case file, then follow the evidence and interviews that support those control gaps.`
+        : "This replay resets the case and rebuilds the evidence trail from the start.",
+    actionItems: [
+      {
+        title: "Re-open the case file",
+        detail:
+          focusIssueTitles.length > 0
+            ? `Re-read ${formatBriefList(focusIssueTitles)} and restate the control story before you draft again.`
+            : "Re-read the case file and restate the control story before you draft again.",
+        targetTab: "caseFile",
+      },
+      {
+        title: "Audit the evidence trail",
+        detail:
+          focusEvidenceTitles.length > 0
+            ? `Cross-check ${formatBriefList(focusEvidenceTitles)} so each missed issue stays tied to the right artifacts.`
+            : "Cross-check the evidence locker so each missed issue stays tied to the right artifacts.",
+        targetTab: "evidence",
+      },
+      {
+        title: "Revisit the interviews",
+        detail:
+          interviewStakeholders.length > 0
+            ? `Re-run the interview trail with ${formatBriefList(interviewStakeholders)} to reopen the evidence you missed.`
+            : "Re-run the interview trail to reopen the evidence you missed.",
+        targetTab: "interviews",
+      },
+      {
+        title: "Redraft the memo",
+        detail: "Finish in findings and tighten the condition, criteria, cause, effect, and recommendation frame.",
+        targetTab: "findings",
+      },
+    ],
+  };
+}
+
 function createCaseRunState(
   auditCase: AuditCase,
   runMode: RunMode,
@@ -126,6 +189,13 @@ function createCaseRunState(
   const runCase = variantResult.auditCase;
   const initialEvidenceIds = variantResult.initialEvidenceIds;
   const firstEvidenceId = initialEvidenceIds[0] ?? runCase.evidence[0]?.id ?? "";
+  const normalizedPracticeBrief = normalizePracticeBrief(practiceBrief);
+  const resolvedPracticeBrief =
+    runMode === "practice"
+      ? normalizedPracticeBrief && normalizedPracticeBrief.actionItems.length > 0
+        ? normalizedPracticeBrief
+        : buildFallbackPracticeBrief(runCase, validFocusIssueIds)
+      : null;
 
   return {
     auditCase: runCase,
@@ -134,7 +204,7 @@ function createCaseRunState(
     runVariantKey,
     runVariantProfile: variantResult.runVariantProfile,
     practiceFocusIssueIds: validFocusIssueIds,
-    practiceBrief,
+    practiceBrief: resolvedPracticeBrief,
     selectedEvidenceId: firstEvidenceId,
     reviewedEvidenceIds: [],
     discoveredEvidenceIds: initialEvidenceIds,
@@ -248,9 +318,13 @@ function normalizePracticeBrief(brief: PracticeBrief | null | undefined): Practi
     : [];
 
   return {
-    title: brief.title,
-    summary: brief.summary,
-    actionItems,
+    title: brief.title.trim(),
+    summary: brief.summary.trim(),
+    actionItems: actionItems.map((item) => ({
+      ...item,
+      title: item.title.trim(),
+      detail: item.detail.trim(),
+    })),
   };
 }
 
@@ -331,18 +405,38 @@ export const useAuditStore = create<AuditState>((set, get) => ({
           ...sanitizeEvidenceIds(runCase, snapshot.discoveredEvidenceIds),
         ]),
       );
+      const practiceFocusIssueIds = snapshotPracticeFocusIssueIds.filter((issueId) =>
+        runCase.issues.some((issue) => issue.id === issueId),
+      );
+      const normalizedPracticeBrief = normalizePracticeBrief(snapshot.practiceBrief);
+      const practiceBrief =
+        snapshotRunMode === "practice"
+          ? normalizedPracticeBrief && normalizedPracticeBrief.actionItems.length > 0
+            ? normalizedPracticeBrief
+            : buildFallbackPracticeBrief(runCase, practiceFocusIssueIds)
+          : null;
+      const workstationTab =
+        snapshot.workstationTab === "inbox" ||
+        snapshot.workstationTab === "caseFile" ||
+        snapshot.workstationTab === "interviews" ||
+        snapshot.workstationTab === "evidence" ||
+        snapshot.workstationTab === "findings"
+          ? snapshot.workstationTab
+          : snapshotRunMode === "practice"
+            ? "caseFile"
+            : "inbox";
 
       return {
-        selectedCaseId: getAuditCase(snapshot.selectedCaseId).id,
+        selectedCaseId: auditCases.some((entry) => entry.id === snapshot.selectedCaseId)
+          ? snapshot.selectedCaseId
+          : auditCase.id,
         auditCase: runCase,
         runMode: snapshotRunMode,
         runDifficulty: snapshotRunDifficulty,
         runVariantKey: snapshotRunVariantKey,
         runVariantProfile: variantResult.runVariantProfile,
-        practiceFocusIssueIds: snapshotPracticeFocusIssueIds.filter((issueId) =>
-          runCase.issues.some((issue) => issue.id === issueId),
-        ),
-        practiceBrief: normalizePracticeBrief(snapshot.practiceBrief),
+        practiceFocusIssueIds,
+        practiceBrief,
         selectedEvidenceId: sanitizeEvidenceSelection(
           runCase,
           snapshot.selectedEvidenceId,
@@ -351,7 +445,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         reviewedEvidenceIds: sanitizeEvidenceIds(runCase, snapshot.reviewedEvidenceIds),
         discoveredEvidenceIds,
         interviewLogIds: sanitizeInterviewIds(runCase, snapshot.interviewLogIds),
-        workstationTab: snapshot.workstationTab,
+        workstationTab,
         draftedFindings: sanitizeDraftFindings(runCase, snapshot.draftedFindings),
         findingDraftForm: normalizeFindingDraftForm({
           ...defaultFindingDraftForm,
@@ -361,7 +455,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
             snapshot.findingDraftForm?.linkedEvidenceIds ?? [],
           ),
         }),
-        reportSubmitted: snapshot.reportSubmitted,
+        reportSubmitted: Boolean(snapshot.reportSubmitted),
         finalScore: normalizeScoreBreakdown(snapshot.finalScore),
       };
     }),
