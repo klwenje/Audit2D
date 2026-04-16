@@ -18,6 +18,22 @@ function formatList(values: string[], limit = 2) {
   return values.slice(0, limit).join(", ");
 }
 
+function buildMissedIssueSummary(missedIssues: Issue[]) {
+  if (missedIssues.length === 0) {
+    return null;
+  }
+
+  if (missedIssues.length === 1) {
+    return `This drill is now narrowed to ${missedIssues[0].title} and the evidence trail behind it.`;
+  }
+
+  if (missedIssues.length === 2) {
+    return `This drill is now narrowed to ${formatList(missedIssues.map((issue) => issue.title), 2)} and the evidence trail behind them.`;
+  }
+
+  return `This drill is built around ${missedIssues.length} missed issue${missedIssues.length === 1 ? "" : "s"} and the evidence trail behind them.`;
+}
+
 export function buildAdaptivePracticeBrief(
   auditCase: AuditCase,
   finalScore: ScoreBreakdown,
@@ -40,6 +56,7 @@ export function buildAdaptivePracticeBrief(
   const developingMemoFindings = draftedFindings.filter((finding) =>
     finalScore.memoDevelopingFindingIds.includes(finding.id),
   );
+  const narrowMissTrail = missedIssues.length > 0 && missedIssues.length <= 2;
 
   const actions: PracticeBriefAction[] = [];
 
@@ -148,17 +165,32 @@ export function buildAdaptivePracticeBrief(
   }
 
   const summary =
-    missedIssues.length > 0
-      ? `This drill is built around ${missedIssues.length} missed issue${missedIssues.length === 1 ? "" : "s"} and the evidence trail behind them.`
-      : sparseMemoFindings.length > 0 || developingMemoFindings.length > 0
+    buildMissedIssueSummary(missedIssues) ??
+    (sparseMemoFindings.length > 0 || developingMemoFindings.length > 0
         ? "This drill is built around strengthening the memo frame so your findings read like audit work, not notes."
       : unsupportedFindings.length > 0 || thinSupportedFindings.length > 0
         ? "This drill is built around tightening evidence support so your report reads like defensible audit work."
-        : "This drill is built around recalibrating severity and coverage so the next report lands more cleanly.";
+        : "This drill is built around recalibrating severity and coverage so the next report lands more cleanly.");
+
+  const baseTitle = runVariantProfile ? `${runVariantProfile.label} Drill` : "Adaptive Remediation Drill";
+  const title =
+    narrowMissTrail
+      ? runVariantProfile
+        ? `${runVariantProfile.label} Drill: ${formatList(missedIssues.map((issue) => issue.title), 2)}`
+        : `Adaptive Drill: ${formatList(missedIssues.map((issue) => issue.title), 2)}`
+      : baseTitle;
+
+  const findingsAction = actions.find((action) => action.targetTab === "findings");
+  const scopedActions = narrowMissTrail
+    ? [
+        ...actions.filter((action) => action.targetTab !== "findings").slice(0, 3),
+        ...(findingsAction ? [findingsAction] : []),
+      ]
+    : actions;
 
   return {
-    title: runVariantProfile ? `${runVariantProfile.label} Drill` : "Adaptive Remediation Drill",
+    title,
     summary: runVariantProfile ? `${runVariantProfile.summary} ${summary}` : summary,
-    actionItems: actions.slice(0, 4),
+    actionItems: scopedActions.slice(0, 4),
   };
 }
