@@ -503,6 +503,30 @@ export function ResultsScene() {
     .map((action) => getReplayTabLabel(action.targetTab))
     .filter((label, index, labels) => labels.indexOf(label) === index)
     .join(" → ");
+  const narrowedReplay = missedIssues.length > 0 && missedIssues.length <= 2;
+  const finalGapReplay = missedIssues.length === 1;
+  const replayFocusLabel =
+    missedIssues.length > 0
+      ? finalGapReplay
+        ? `Replay focus: final gap on ${missedIssues[0].title}.`
+        : narrowedReplay
+          ? `Replay focus: ${formatLabelList(missedIssues.map((issue) => issue.title), 2)} remain open.`
+          : `Replay focus: ${missedIssues.length} missed issue${missedIssues.length === 1 ? "" : "s"} and the evidence trail behind them.`
+      : "Replay focus: tighten evidence support and memo framing before the next closeout.";
+  const resumeReplayLabel =
+    primaryReplayAction
+      ? finalGapReplay
+        ? `Finish ${getReplayTabLabel(primaryReplayAction.targetTab)}`
+        : narrowedReplay
+          ? `Resume ${getReplayTabLabel(primaryReplayAction.targetTab)} Cleanup`
+          : `Resume ${getReplayTabLabel(primaryReplayAction.targetTab)}`
+      : "Resume Workstation";
+  const launchReplayLabel =
+    finalGapReplay
+      ? "Finish Final Gap"
+      : narrowedReplay
+        ? "Finish Remaining Gaps"
+        : "Launch Targeted Replay";
   const canStartAdaptiveDrill =
     missedIssues.length > 0 ||
     unsupportedFindings.length > 0 ||
@@ -617,11 +641,7 @@ export function ResultsScene() {
           <p className="report-summary-copy">{adaptivePracticeBrief.summary}</p>
           <div className="replay-focus-panel">
             <div className="replay-focus-copy">
-              <p className="scene-copy small">
-                {missedIssues.length > 0
-                  ? `Replay focus: ${missedIssues.length} missed issue${missedIssues.length === 1 ? "" : "s"} and the evidence trail behind them.`
-                  : "Replay focus: tighten evidence support and memo framing before the next closeout."}
-              </p>
+              <p className="scene-copy small">{replayFocusLabel}</p>
               <p className="replay-route-label">
                 Next route: {replayRouteLabel || "Findings"}
               </p>
@@ -643,7 +663,7 @@ export function ResultsScene() {
               }}
             >
               <span className="menu-indicator">&gt;</span>
-              <span>{primaryReplayAction ? `Resume ${getReplayTabLabel(primaryReplayAction.targetTab)}` : "Resume Workstation"}</span>
+              <span>{resumeReplayLabel}</span>
             </button>
           </div>
           <div className="replay-action-grid">
@@ -1217,7 +1237,7 @@ export function ResultsScene() {
             disabled={!canStartAdaptiveDrill}
           >
             <span className="menu-indicator">&gt;</span>
-            <span>Launch Targeted Replay</span>
+            <span>{launchReplayLabel}</span>
           </button>
           <button
             className="menu-button selected"
