@@ -109,6 +109,43 @@ export function MainMenuScene() {
   const selectedCaseMissedIssueCount = selectedCaseStudy.lastMissedIssueIds.length;
   const selectedCaseReplayReady = selectedCaseMissedIssueCount > 0;
   const selectedCaseIssueTrail = formatIssueTrail(selectedCaseFocusLabels, selectedCaseMissedIssueCount);
+  const selectedCaseFinalGapReady = selectedCaseMissedIssueCount === 1;
+  const selectedCaseNarrowReplay = selectedCaseMissedIssueCount > 0 && selectedCaseMissedIssueCount <= 2;
+  const selectedCaseReplayBadge = selectedCaseReplayReady
+    ? selectedCaseFinalGapReady
+      ? "Final Gap Ready"
+      : selectedCaseNarrowReplay
+        ? "Cleanup Ready"
+        : "Replay Ready"
+    : "Locked";
+  const selectedCaseReplayHeading = selectedCaseReplayReady
+    ? selectedCaseFinalGapReady
+      ? "Finish the final gap"
+      : selectedCaseNarrowReplay
+        ? "Finish the remaining gaps"
+        : "Replay the miss trail"
+    : "Replay locked until a miss trail exists";
+  const selectedCaseReplaySummary = selectedCaseReplayReady
+    ? selectedCaseFinalGapReady
+      ? `This case is down to one active miss: ${selectedCaseFocusLabels[0] ?? "the remaining control gap"}.`
+      : selectedCaseNarrowReplay
+        ? `This case is down to ${selectedCaseMissedIssueCount} active misses and is ready for a cleanup replay.`
+        : `This case is replay-ready because the last recorded run missed ${selectedCaseMissedIssueCount} issue${selectedCaseMissedIssueCount === 1 ? "" : "s"}.`
+    : "Targeted replay unlocks after a run records misses. Finish one pass, and this panel will point you back to the exact gaps.";
+  const selectedCaseReplayNote = selectedCaseReplayReady
+    ? selectedCaseFinalGapReady
+      ? "The next replay should act like a finishing pass: reopen the case at the selected difficulty and close the last remaining gap cleanly."
+      : selectedCaseNarrowReplay
+        ? "The next replay will reopen this case at the selected difficulty and keep the remaining gaps front and center."
+        : "The next replay will reopen this case at the selected difficulty and keep the miss trail front and center."
+    : "Use the first run to seed the archive, then come back here to launch a focused retry.";
+  const selectedCaseReplayActionLabel = selectedCaseReplayReady
+    ? selectedCaseFinalGapReady
+      ? "Finish Final Gap"
+      : selectedCaseNarrowReplay
+        ? "Finish Remaining Gaps"
+        : "Launch Focused Replay"
+    : "Replay Locked";
   const strongestCaseLabel = useMemo(() => {
     const strongestCase = studyMomentum.strongestCase;
     if (!strongestCase) {
@@ -503,32 +540,24 @@ export function MainMenuScene() {
             <div className="artifact-panel-header">
               <div>
                 <p className="eyebrow">Targeted Replay</p>
-                <h2>{selectedCaseReplayReady ? "Replay the miss trail" : "Replay locked until a miss trail exists"}</h2>
+                <h2>{selectedCaseReplayHeading}</h2>
               </div>
-              <div className="panel-chip">{selectedCaseReplayReady ? "Replay Ready" : "Locked"}</div>
+              <div className="panel-chip">{selectedCaseReplayBadge}</div>
             </div>
-            <p className="scene-copy small">
-              {selectedCaseReplayReady
-                ? `This case is replay-ready because the last recorded run missed ${selectedCaseMissedIssueCount} issue${selectedCaseMissedIssueCount === 1 ? "" : "s"}.`
-                : "Targeted replay unlocks after a run records misses. Finish one pass, and this panel will point you back to the exact gaps."}
-            </p>
+            <p className="scene-copy small">{selectedCaseReplaySummary}</p>
             {selectedCaseReplayReady ? (
               <div className="practice-focus-pills" aria-label="Missed issue focus">
                 <span className="panel-chip">Focus: {selectedCaseIssueTrail}</span>
               </div>
             ) : null}
-            <p className="scene-copy small practice-replay-note">
-              {selectedCaseReplayReady
-                ? "The next replay will reopen this case at the selected difficulty and keep the miss trail front and center."
-                : "Use the first run to seed the archive, then come back here to launch a focused retry."}
-            </p>
+            <p className="scene-copy small practice-replay-note">{selectedCaseReplayNote}</p>
             <button
               className="menu-button selected practice-button"
               onClick={startPracticeReplay}
               disabled={!selectedCaseReplayReady}
             >
               <span className="menu-indicator">&gt;</span>
-              <span>{selectedCaseReplayReady ? "Launch Focused Replay" : "Replay Locked"}</span>
+              <span>{selectedCaseReplayActionLabel}</span>
             </button>
           </section>
         </section>
