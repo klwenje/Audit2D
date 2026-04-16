@@ -6,6 +6,7 @@ import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
 import { playBackTone, playConfirmTone } from "../utils/audio";
 import type { DraftFinding } from "../types/audit";
 import { getFindingMemoProfile } from "../utils/scoring";
+import { getCaseMasteryStats } from "../utils/studyProgress";
 
 const MEMO_FIELD_LABELS = [
   { key: "condition", label: "Condition" },
@@ -117,6 +118,17 @@ function buildPracticeReplayFocus(
     detail: `Return to the scope memo and control story for ${issue.title} before drafting again.`,
     targetTab: "caseFile",
   };
+}
+
+function formatReplayIssueSummary(values: string[], limit = 2) {
+  const preview = values.slice(0, limit);
+  const remaining = Math.max(0, values.length - preview.length);
+
+  if (preview.length === 0) {
+    return "";
+  }
+
+  return remaining > 0 ? `${preview.join(", ")} +${remaining} more` : preview.join(", ");
 }
 
 export function WorkstationScene() {
@@ -231,6 +243,13 @@ export function WorkstationScene() {
   const practiceFocusIssues = auditCase.issues.filter((issue) =>
     practiceFocusIssueIds.includes(issue.id),
   );
+  const caseMastery = getCaseMasteryStats(auditCase.id);
+  const clearedPracticeIssues = auditCase.issues.filter((issue) =>
+    caseMastery.lastClearedIssueIds.includes(issue.id) && !practiceFocusIssueIds.includes(issue.id),
+  );
+  const clearedPracticeIssueSummary = formatReplayIssueSummary(
+    clearedPracticeIssues.map((issue) => issue.title),
+  );
   const practiceFocusAction = useMemo(() => {
     const primaryAction = practiceBrief?.actionItems?.[0];
 
@@ -308,6 +327,15 @@ export function WorkstationScene() {
               {practiceBrief?.summary ??
                 "This replay is focused on the issues you missed last time. Start with the guided route below, then trace the evidence and interviews tied to those control gaps."}
             </p>
+            {clearedPracticeIssues.length > 0 && (
+              <div className="replay-route-banner" aria-label="Resolved gaps">
+                <span className="panel-chip">Already Cleared</span>
+                <p className="scene-copy small replay-route-copy">
+                  You already fixed {clearedPracticeIssues.length} prior gap{clearedPracticeIssues.length === 1 ? "" : "s"} in this case.
+                  {clearedPracticeIssueSummary ? ` Recent closures: ${clearedPracticeIssueSummary}.` : ""}
+                </p>
+              </div>
+            )}
             <div className="replay-focus-shell">
               <article className="study-review-card replay-focus-card">
                 <div className="mail-header">
@@ -350,7 +378,7 @@ export function WorkstationScene() {
                         <li key={issue.id} className="replay-issue-item">
                           <div>
                             <strong>{issue.title}</strong>
-                            <span>{issue.severity}</span>
+                            <span>{issue.severity} · Open</span>
                           </div>
                           <p>{issueReplay.detail}</p>
                         </li>
@@ -364,6 +392,15 @@ export function WorkstationScene() {
                 )}
               </article>
             </div>
+            {clearedPracticeIssues.length > 0 && (
+              <div className="replay-cleared-strip" aria-label="Closed gaps">
+                {clearedPracticeIssues.slice(0, 3).map((issue) => (
+                  <span key={issue.id} className="replay-cleared-chip">
+                    Cleared: {issue.title}
+                  </span>
+                ))}
+              </div>
+            )}
             {practiceBrief && practiceBrief.actionItems.length > 0 && (
               <div className="replay-action-grid workstation-drill-grid">
                 {practiceBrief.actionItems.map((action, index) => (
