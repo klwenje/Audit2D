@@ -1,5 +1,6 @@
 import type { DraftFinding, Issue, AuditCase } from "../types/audit";
 import type { ScoreBreakdown } from "./scoring";
+import type { RunVariantProfile } from "./runVariant";
 
 export type PracticeBriefAction = {
   title: string;
@@ -21,6 +22,7 @@ export function buildAdaptivePracticeBrief(
   auditCase: AuditCase,
   finalScore: ScoreBreakdown,
   draftedFindings: DraftFinding[],
+  runVariantProfile?: RunVariantProfile | null,
 ): PracticeBrief {
   const missedIssues = auditCase.issues.filter((issue) => finalScore.missedIssueIds.includes(issue.id));
   const unsupportedFindings = draftedFindings.filter((finding) =>
@@ -31,6 +33,12 @@ export function buildAdaptivePracticeBrief(
   );
   const severityMismatchIssues = auditCase.issues.filter((issue) =>
     finalScore.severityMismatches.includes(issue.id),
+  );
+  const sparseMemoFindings = draftedFindings.filter((finding) =>
+    finalScore.memoSparseFindingIds.includes(finding.id),
+  );
+  const developingMemoFindings = draftedFindings.filter((finding) =>
+    finalScore.memoDevelopingFindingIds.includes(finding.id),
   );
 
   const actions: PracticeBriefAction[] = [];
@@ -98,6 +106,18 @@ export function buildAdaptivePracticeBrief(
     });
   }
 
+  if (sparseMemoFindings.length > 0 || developingMemoFindings.length > 0) {
+    const memoTargets = [...sparseMemoFindings, ...developingMemoFindings].map((finding) => finding.title);
+    actions.push({
+      title: "Reframe the memo structure",
+      detail:
+        memoTargets.length > 0
+          ? `Rewrite ${formatList(memoTargets)} using the full memo frame: condition, criteria, cause, effect, and recommendation.`
+          : "Rewrite the memo using the full frame: condition, criteria, cause, effect, and recommendation.",
+      targetTab: "findings",
+    });
+  }
+
   const findingsNeedingAttention = [
     ...unsupportedFindings.map((finding) => finding.title),
     ...thinSupportedFindings.map((finding) => finding.title),
@@ -113,16 +133,32 @@ export function buildAdaptivePracticeBrief(
     targetTab: "findings",
   });
 
+  if (runVariantProfile) {
+    const priority = new Map(runVariantProfile.drillPriority.map((tab, index) => [tab, index]));
+    actions.sort((left, right) => {
+      const leftPriority = priority.get(left.targetTab) ?? runVariantProfile.drillPriority.length;
+      const rightPriority = priority.get(right.targetTab) ?? runVariantProfile.drillPriority.length;
+
+      if (leftPriority === rightPriority) {
+        return left.title.localeCompare(right.title);
+      }
+
+      return leftPriority - rightPriority;
+    });
+  }
+
   const summary =
     missedIssues.length > 0
       ? `This drill is built around ${missedIssues.length} missed issue${missedIssues.length === 1 ? "" : "s"} and the evidence trail behind them.`
+      : sparseMemoFindings.length > 0 || developingMemoFindings.length > 0
+        ? "This drill is built around strengthening the memo frame so your findings read like audit work, not notes."
       : unsupportedFindings.length > 0 || thinSupportedFindings.length > 0
         ? "This drill is built around tightening evidence support so your report reads like defensible audit work."
         : "This drill is built around recalibrating severity and coverage so the next report lands more cleanly.";
 
   return {
-    title: "Adaptive Remediation Drill",
-    summary,
+    title: runVariantProfile ? `${runVariantProfile.label} Drill` : "Adaptive Remediation Drill",
+    summary: runVariantProfile ? `${runVariantProfile.summary} ${summary}` : summary,
     actionItems: actions.slice(0, 4),
   };
 }

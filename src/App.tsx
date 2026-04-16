@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { MainMenuScene } from "./scenes/MainMenuScene";
 import { OfficeScene } from "./scenes/OfficeScene";
 import { OptionsScene } from "./scenes/OptionsScene";
+import { PortfolioScene } from "./scenes/PortfolioScene";
 import { ResultsScene } from "./scenes/ResultsScene";
 import { SplashScene } from "./scenes/SplashScene";
 import { WorkstationScene } from "./scenes/WorkstationScene";
@@ -71,6 +72,7 @@ function App() {
     <main className="app-shell">
       {currentScene === "splash" && <SplashScene />}
       {currentScene === "mainMenu" && <MainMenuScene />}
+      {currentScene === "portfolio" && <PortfolioScene />}
       {currentScene === "options" && <OptionsScene />}
       {currentScene === "office" && <OfficeScene />}
       {currentScene === "workstation" && <WorkstationScene />}

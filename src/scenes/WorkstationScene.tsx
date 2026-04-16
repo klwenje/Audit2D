@@ -4,6 +4,32 @@ import { useGameStore } from "../store/useGameStore";
 import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
 import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
 import { playBackTone, playConfirmTone } from "../utils/audio";
+import type { DraftFinding } from "../types/audit";
+import { getFindingMemoProfile } from "../utils/scoring";
+
+const MEMO_FIELD_LABELS = [
+  { key: "condition", label: "Condition" },
+  { key: "criteria", label: "Criteria" },
+  { key: "cause", label: "Cause" },
+  { key: "effect", label: "Effect" },
+  { key: "recommendation", label: "Recommendation" },
+] as const;
+
+type MemoFieldKey = (typeof MEMO_FIELD_LABELS)[number]["key"];
+
+function getDraftFindingMemoField(finding: DraftFinding, field: MemoFieldKey) {
+  if (field === "condition") {
+    return (finding.condition ?? finding.description ?? "").trim();
+  }
+
+  return (finding[field] ?? "").trim();
+}
+
+function getMemoCompletenessLabel(filledCount: number) {
+  if (filledCount >= 5) return "Fully Framed";
+  if (filledCount >= 3) return "Developing";
+  return "Sparse";
+}
 
 function getEvidenceArtifactLabel(type: string) {
   const normalized = type.toLowerCase();
@@ -22,6 +48,7 @@ export function WorkstationScene() {
   const sfxVolume = useGameStore((state) => state.settings.sfxVolume);
   const auditCase = useAuditStore((state) => state.auditCase);
   const runMode = useAuditStore((state) => state.runMode);
+  const runVariantProfile = useAuditStore((state) => state.runVariantProfile);
   const practiceFocusIssueIds = useAuditStore((state) => state.practiceFocusIssueIds);
   const practiceBrief = useAuditStore((state) => state.practiceBrief);
   const selectedEvidenceId = useAuditStore((state) => state.selectedEvidenceId);
@@ -152,6 +179,7 @@ export function WorkstationScene() {
             <span>Deadline: {auditCase.deadlineDays} days</span>
             <span>Reviewed: {reviewedCount}/{visibleEvidence.length}</span>
             <span>Interviews: {askedInterviewCount}/{auditCase.interviewPrompts.length}</span>
+            <span className="panel-chip">Variant: {runVariantProfile.label}</span>
             <button type="button" className="panel-chip panel-chip-button" onClick={openPauseOverlay}>
               Pause: Esc
             </button>
@@ -480,6 +508,13 @@ export function WorkstationScene() {
 
         {workstationTab === "findings" && (
           <div className="workstation-layout single">
+            <section className="terminal-panel artifact-intro-panel">
+              <p className="terminal-kicker">Audit Memo Frame</p>
+              <p className="terminal-muted">
+                Keep each finding in a defensible memo structure: condition, criteria, cause, effect,
+                and recommendation. The legacy description field still acts as the condition line.
+              </p>
+            </section>
             <section className="terminal-panel artifact-panel">
               <div className="artifact-banner">
                 <div>
@@ -517,12 +552,42 @@ export function WorkstationScene() {
               </div>
 
               <label className="option-row">
-                <span>Description</span>
+                <span>Condition / Observation</span>
                 <textarea
                   className="terminal-textarea"
-                  value={findingDraftForm.description}
-                  onChange={(event) => updateFindingDraftForm({ description: event.target.value })}
+                  value={findingDraftForm.condition}
+                  onChange={(event) => updateFindingDraftForm({ condition: event.target.value })}
                   placeholder="Describe the condition observed during testing."
+                />
+              </label>
+
+              <label className="option-row">
+                <span>Criteria</span>
+                <textarea
+                  className="terminal-textarea"
+                  value={findingDraftForm.criteria}
+                  onChange={(event) => updateFindingDraftForm({ criteria: event.target.value })}
+                  placeholder="Describe the policy, standard, or expected control behavior."
+                />
+              </label>
+
+              <label className="option-row">
+                <span>Cause</span>
+                <textarea
+                  className="terminal-textarea"
+                  value={findingDraftForm.cause}
+                  onChange={(event) => updateFindingDraftForm({ cause: event.target.value })}
+                  placeholder="Describe why the condition occurred."
+                />
+              </label>
+
+              <label className="option-row">
+                <span>Effect</span>
+                <textarea
+                  className="terminal-textarea"
+                  value={findingDraftForm.effect}
+                  onChange={(event) => updateFindingDraftForm({ effect: event.target.value })}
+                  placeholder="Describe the risk, impact, or consequence."
                 />
               </label>
 
@@ -596,15 +661,36 @@ export function WorkstationScene() {
                       <strong>{finding.title}</strong>
                       <span>{finding.severity}</span>
                     </div>
-                    <p className="mail-body">{finding.description}</p>
-                    {finding.linkedEvidenceIds.length > 0 && (
-                      <p className="terminal-muted">
-                        Evidence: {" "}
-                        {finding.linkedEvidenceIds
-                          .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
-                          .join(", ")}
-                      </p>
-                    )}
+                    <div className="finding-memo-grid">
+                      <article className="finding-memo-card">
+                        <span>Condition</span>
+                        <p>{finding.description || "Not stated."}</p>
+                      </article>
+                      <article className="finding-memo-card">
+                        <span>Criteria</span>
+                        <p>{finding.criteria || "Not stated."}</p>
+                      </article>
+                      <article className="finding-memo-card">
+                        <span>Cause</span>
+                        <p>{finding.cause || "Not stated."}</p>
+                      </article>
+                      <article className="finding-memo-card">
+                        <span>Effect</span>
+                        <p>{finding.effect || "Not stated."}</p>
+                      </article>
+                      <article className="finding-memo-card wide">
+                        <span>Recommendation</span>
+                        <p>{finding.recommendation || "Not stated."}</p>
+                      </article>
+                    </div>
+                    <p className="terminal-muted finding-memo-evidence">
+                      Evidence:{" "}
+                      {finding.linkedEvidenceIds.length > 0
+                        ? finding.linkedEvidenceIds
+                            .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
+                            .join(", ")
+                        : "None linked."}
+                    </p>
                     <button className="text-button" onClick={() => removeDraftFinding(finding.id)}>
                       Delete
                     </button>

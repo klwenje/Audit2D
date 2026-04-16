@@ -63,7 +63,17 @@ function getNextStepAdvice(
   missedCount: number,
   unsupportedCount: number,
   thinSupportedCount: number,
+  sparseMemoCount: number,
+  developingMemoCount: number,
 ) {
+  if (sparseMemoCount > 0) {
+    return "Focus on the memo frame first. Each finding should read like an audit memo with condition, criteria, cause, effect, and recommendation before you worry about polishing the score.";
+  }
+
+  if (developingMemoCount > 0) {
+    return "Your memo structure is taking shape, but a few findings still need fuller condition, criteria, cause, effect, and recommendation framing.";
+  }
+
   if (score >= 85) {
     return "Push into harder cases next. Your next gain will come from spotting edge cases earlier and tightening report language.";
   }
@@ -91,6 +101,7 @@ export function ResultsScene() {
   const auditCase = useAuditStore((state) => state.auditCase);
   const finalScore = useAuditStore((state) => state.finalScore);
   const runDifficulty = useAuditStore((state) => state.runDifficulty);
+  const runVariantProfile = useAuditStore((state) => state.runVariantProfile);
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
@@ -204,6 +215,15 @@ export function ResultsScene() {
   const thinSupportedFindings = draftedFindings.filter((finding) =>
     finalScore.thinSupportedFindingIds.includes(finding.id),
   );
+  const memoStrongFindings = draftedFindings.filter((finding) =>
+    finalScore.memoStrongFindingIds.includes(finding.id),
+  );
+  const memoDevelopingFindings = draftedFindings.filter((finding) =>
+    finalScore.memoDevelopingFindingIds.includes(finding.id),
+  );
+  const memoSparseFindings = draftedFindings.filter((finding) =>
+    finalScore.memoSparseFindingIds.includes(finding.id),
+  );
   const rank = getRank(finalScore.score);
   const headline = getPerformanceHeadline(finalScore.score);
   const narrative = getPerformanceNarrative(
@@ -222,10 +242,12 @@ export function ResultsScene() {
     missedIssues.length,
     unsupportedFindings.length,
     thinSupportedFindings.length,
+    memoSparseFindings.length,
+    memoDevelopingFindings.length,
   );
   const adaptivePracticeBrief = useMemo(
-    () => buildAdaptivePracticeBrief(auditCase, finalScore, draftedFindings),
-    [auditCase, draftedFindings, finalScore],
+    () => buildAdaptivePracticeBrief(auditCase, finalScore, draftedFindings, runVariantProfile),
+    [auditCase, draftedFindings, finalScore, runVariantProfile],
   );
   const caseMastery = getCaseMasteryStats(auditCase.id);
   const projectedRuns = caseMastery.timesPlayed + 1;
@@ -299,7 +321,9 @@ export function ResultsScene() {
     missedIssues.length > 0 ||
     unsupportedFindings.length > 0 ||
     thinSupportedFindings.length > 0 ||
-    finalScore.severityMismatches.length > 0;
+    finalScore.severityMismatches.length > 0 ||
+    memoSparseFindings.length > 0 ||
+    memoDevelopingFindings.length > 0;
 
   return (
     <section className="scene scene-results">
@@ -338,7 +362,12 @@ export function ResultsScene() {
               <p className="eyebrow">Executive Summary</p>
               <h2>{auditCase.title}</h2>
             </div>
-            <div className="report-chip">{rank} | {runDifficulty}</div>
+            <div className="report-chip-group">
+              <div className="report-chip">
+                {rank} | {runDifficulty}
+              </div>
+              <div className="report-chip">{runVariantProfile.label}</div>
+            </div>
           </div>
 
           <p className="report-summary-copy">{narrative}</p>
@@ -359,6 +388,10 @@ export function ResultsScene() {
             <article className="summary-metric">
               <span className="metric-label">Evidence Reviewed</span>
               <strong>{reviewedEvidenceIds.length}</strong>
+            </article>
+            <article className="summary-metric">
+              <span className="metric-label">Memo Structure</span>
+              <strong>{memoStrongFindings.length}</strong>
             </article>
           </div>
         </section>
@@ -563,6 +596,13 @@ export function ResultsScene() {
                 <p className="terminal-muted">Findings tied directly to the right artifacts.</p>
               </article>
               <article className="progress-summary-card">
+                <span className="metric-label">Memo Complete</span>
+                <strong>{memoStrongFindings.length}</strong>
+                <p className="terminal-muted">
+                  {memoDevelopingFindings.length} developing, {memoSparseFindings.length} sparse.
+                </p>
+              </article>
+              <article className="progress-summary-card">
                 <span className="metric-label">Thin Support</span>
                 <strong>{thinSupportedFindings.length}</strong>
                 <p className="terminal-muted">Directionally right, but not anchored tightly enough.</p>
@@ -594,10 +634,30 @@ export function ResultsScene() {
                       </strong>
                       <span>{finding.severity}</span>
                     </div>
-                    <p><strong>Condition:</strong> {finding.description}</p>
-                    <p><strong>Recommendation:</strong> {finding.recommendation || "No recommendation provided."}</p>
-                    <p>
-                      <strong>Evidence:</strong>{" "}
+                    <div className="finding-memo-grid report-finding-grid">
+                      <article className="finding-memo-card">
+                        <span>Condition</span>
+                        <p>{finding.description || "No condition provided."}</p>
+                      </article>
+                      <article className="finding-memo-card">
+                        <span>Criteria</span>
+                        <p>{finding.criteria || "No criteria provided."}</p>
+                      </article>
+                      <article className="finding-memo-card">
+                        <span>Cause</span>
+                        <p>{finding.cause || "No cause provided."}</p>
+                      </article>
+                      <article className="finding-memo-card">
+                        <span>Effect</span>
+                        <p>{finding.effect || "No effect provided."}</p>
+                      </article>
+                      <article className="finding-memo-card wide">
+                        <span>Recommendation</span>
+                        <p>{finding.recommendation || "No recommendation provided."}</p>
+                      </article>
+                    </div>
+                    <p className="finding-memo-evidence">
+                      Evidence:{" "}
                       {finding.linkedEvidenceIds.length > 0
                         ? finding.linkedEvidenceIds
                             .map((id) => auditCase.evidence.find((entry) => entry.id === id)?.title ?? id)
@@ -764,6 +824,60 @@ export function ResultsScene() {
                 <li>No unsupported findings.</li>
               )}
             </ul>
+          </section>
+
+          <section className="terminal-panel">
+            <h2>Memo Structure</h2>
+            <div className="terminal-panel-stack">
+              {memoStrongFindings.length > 0 ? (
+                <article className="study-review-card">
+                  <div className="mail-header">
+                    <strong>Fully framed findings</strong>
+                    <span>{memoStrongFindings.length}</span>
+                  </div>
+                  <p className="mail-body">
+                    These findings use the full audit memo frame and are easier to defend in closeout.
+                  </p>
+                  <p className="terminal-muted">
+                    {memoStrongFindings.map((finding) => finding.title).join(", ")}
+                  </p>
+                </article>
+              ) : (
+                <p className="terminal-muted">No fully framed findings were drafted.</p>
+              )}
+              {memoDevelopingFindings.length > 0 ? (
+                <article className="study-review-card">
+                  <div className="mail-header">
+                    <strong>Developing memo structure</strong>
+                    <span>{memoDevelopingFindings.length}</span>
+                  </div>
+                  <p className="mail-body">
+                    These findings have the right outline, but a few memo fields still need fuller support.
+                  </p>
+                  <p className="terminal-muted">
+                    {memoDevelopingFindings.map((finding) => finding.title).join(", ")}
+                  </p>
+                </article>
+              ) : (
+                <p className="terminal-muted">No developing memo findings were flagged.</p>
+              )}
+              {memoSparseFindings.length > 0 ? (
+                <article className="study-review-card">
+                  <div className="mail-header">
+                    <strong>Sparse memo structure</strong>
+                    <span>{memoSparseFindings.length}</span>
+                  </div>
+                  <p className="mail-body">
+                    These findings need the full condition, criteria, cause, effect, and recommendation frame.
+                  </p>
+                  <p className="terminal-muted">
+                    {memoSparseFindings.map((finding) => finding.title).join(", ")}
+                  </p>
+                </article>
+              ) : (
+                <p className="terminal-muted">No sparse memo findings were flagged.</p>
+              )}
+            </div>
           </section>
         </div>
 

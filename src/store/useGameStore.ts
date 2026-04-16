@@ -1,6 +1,13 @@
 import { create } from "zustand";
 
-export type GameScene = "splash" | "mainMenu" | "options" | "office" | "workstation" | "results";
+export type GameScene =
+  | "splash"
+  | "mainMenu"
+  | "portfolio"
+  | "options"
+  | "office"
+  | "workstation"
+  | "results";
 
 export type PlayerPosition = {
   x: number;

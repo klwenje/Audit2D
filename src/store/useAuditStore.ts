@@ -3,11 +3,15 @@ import { auditCases, getAuditCase } from "../data/cases";
 import type { AuditCase, DraftFinding, Severity } from "../types/audit";
 import { scoreFindings, type ScoreBreakdown } from "../utils/scoring";
 import { normalizeRunDifficulty, type RunDifficulty } from "../utils/runDifficulty";
+import { buildVariantCase, type RunMode, type RunVariantProfile } from "../utils/runVariant";
 import type { PracticeBrief } from "../utils/remediationDrill";
 
 type FindingDraftForm = {
   title: string;
-  description: string;
+  condition: string;
+  criteria: string;
+  cause: string;
+  effect: string;
   severity: Severity;
   recommendation: string;
   linkedEvidenceIds: string[];
@@ -19,6 +23,7 @@ export type AuditStateSnapshot = {
   runMode: "standard" | "practice";
   runDifficulty: RunDifficulty;
   runVariantKey: string;
+  runVariantProfile: RunVariantProfile;
   practiceFocusIssueIds: string[];
   practiceBrief: PracticeBrief | null;
   selectedEvidenceId: string;
@@ -39,6 +44,7 @@ type AuditState = {
   runMode: "standard" | "practice";
   runDifficulty: RunDifficulty;
   runVariantKey: string;
+  runVariantProfile: RunVariantProfile;
   practiceFocusIssueIds: string[];
   practiceBrief: PracticeBrief | null;
   selectedEvidenceId: string;
@@ -74,15 +80,16 @@ type AuditState = {
 
 const defaultFindingDraftForm: FindingDraftForm = {
   title: "",
-  description: "",
+  condition: "",
+  criteria: "",
+  cause: "",
+  effect: "",
   severity: "Medium",
   recommendation: "",
   linkedEvidenceIds: [],
 };
 
 const starterCase = auditCases[0];
-
-type RunMode = AuditState["runMode"];
 type DifficultyMode = RunDifficulty;
 
 function createRunVariantKey(caseId: string, runMode: RunMode, focusIssueIds: string[]) {
@@ -98,108 +105,6 @@ function createLegacyVariantKey(caseId: string, runMode: RunMode, focusIssueIds:
   return `${caseId}:${runMode}:${focusKey}`;
 }
 
-function createSeededRandom(seed: string) {
-  let state = 2166136261;
-
-  for (let index = 0; index < seed.length; index += 1) {
-    state ^= seed.charCodeAt(index);
-    state = Math.imul(state, 16777619);
-  }
-
-  return () => {
-    state += 0x6d2b79f5;
-    let value = Math.imul(state ^ (state >>> 15), 1 | state);
-    value ^= value + Math.imul(value ^ (value >>> 7), 61 | value);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function shuffleBySeed<T>(items: T[], seed: string) {
-  const next = [...items];
-  const random = createSeededRandom(seed);
-
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(random() * (index + 1));
-    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  }
-
-  return next;
-}
-
-function buildVariantCase(
-  auditCase: AuditCase,
-  runVariantKey: string,
-  runMode: RunMode,
-  runDifficulty: DifficultyMode,
-  focusIssueIds: string[],
-) {
-  const shuffledInbox = shuffleBySeed(auditCase.inbox, `${runVariantKey}:inbox`);
-  const shuffledEvidence = shuffleBySeed(auditCase.evidence, `${runVariantKey}:evidence`);
-  const shuffledInterviewPrompts = shuffleBySeed(
-    auditCase.interviewPrompts,
-    `${runVariantKey}:interviews`,
-  );
-
-  const validEvidenceIdSet = new Set(auditCase.evidence.map((item) => item.id));
-  const baseInitialEvidenceIds = auditCase.initialEvidenceIds.filter((evidenceId) =>
-    validEvidenceIdSet.has(evidenceId),
-  );
-  const relevantEvidenceIds = shuffledEvidence
-    .map((item) => item.id)
-    .filter((evidenceId) =>
-      auditCase.issues.some((issue) => issue.relatedEvidence.includes(evidenceId)),
-    );
-
-  let initialEvidenceIds: string[];
-  if (runDifficulty === "easy") {
-    initialEvidenceIds = Array.from(new Set([...relevantEvidenceIds, ...baseInitialEvidenceIds]));
-  } else if (runDifficulty === "hard") {
-    initialEvidenceIds = baseInitialEvidenceIds.slice(0, 1);
-  } else {
-    initialEvidenceIds = [...baseInitialEvidenceIds];
-  }
-
-  if (runMode === "practice") {
-    const focusEvidenceIds = focusIssueIds.flatMap((issueId) => {
-      const issue = auditCase.issues.find((item) => item.id === issueId);
-      return issue?.relatedEvidence ?? [];
-    });
-
-    initialEvidenceIds = Array.from(new Set([...focusEvidenceIds, ...initialEvidenceIds]));
-  }
-
-  if (initialEvidenceIds.length === 0 && shuffledEvidence.length > 0) {
-    initialEvidenceIds = [shuffledEvidence[0].id];
-  }
-
-  const orderedInitialEvidenceIds = shuffledEvidence
-    .map((item) => item.id)
-    .filter((evidenceId) => initialEvidenceIds.includes(evidenceId));
-  const fallbackInitialEvidenceIds = initialEvidenceIds.filter((evidenceId) =>
-    validEvidenceIdSet.has(evidenceId),
-  );
-  const orderedInterviewPrompts =
-    runDifficulty === "easy"
-      ? [
-          ...shuffledInterviewPrompts.filter((prompt) => (prompt.revealsEvidenceIds?.length ?? 0) > 0),
-          ...shuffledInterviewPrompts.filter((prompt) => (prompt.revealsEvidenceIds?.length ?? 0) === 0),
-        ]
-      : runDifficulty === "hard"
-        ? [
-            ...shuffledInterviewPrompts.filter((prompt) => (prompt.revealsEvidenceIds?.length ?? 0) === 0),
-            ...shuffledInterviewPrompts.filter((prompt) => (prompt.revealsEvidenceIds?.length ?? 0) > 0),
-          ]
-        : shuffledInterviewPrompts;
-
-  return {
-    ...auditCase,
-    inbox: shuffledInbox,
-    evidence: shuffledEvidence,
-    interviewPrompts: orderedInterviewPrompts,
-    initialEvidenceIds: orderedInitialEvidenceIds.length > 0 ? orderedInitialEvidenceIds : fallbackInitialEvidenceIds,
-  };
-}
-
 function createCaseRunState(
   auditCase: AuditCase,
   runMode: RunMode,
@@ -211,14 +116,15 @@ function createCaseRunState(
   const validFocusIssueIds = focusIssueIds.filter((issueId) =>
     auditCase.issues.some((issue) => issue.id === issueId),
   );
-  const runCase = buildVariantCase(
+  const variantResult = buildVariantCase(
     auditCase,
     runVariantKey,
     runMode,
     runDifficulty,
     validFocusIssueIds,
   );
-  const initialEvidenceIds = runCase.initialEvidenceIds;
+  const runCase = variantResult.auditCase;
+  const initialEvidenceIds = variantResult.initialEvidenceIds;
   const firstEvidenceId = initialEvidenceIds[0] ?? runCase.evidence[0]?.id ?? "";
 
   return {
@@ -226,6 +132,7 @@ function createCaseRunState(
     runMode,
     runDifficulty,
     runVariantKey,
+    runVariantProfile: variantResult.runVariantProfile,
     practiceFocusIssueIds: validFocusIssueIds,
     practiceBrief,
     selectedEvidenceId: firstEvidenceId,
@@ -261,8 +168,44 @@ function sanitizeInterviewIds(auditCase: AuditCase, promptIds: string[]) {
 function sanitizeDraftFindings(auditCase: AuditCase, findings: DraftFinding[]) {
   return findings.map((finding) => ({
     ...finding,
-    linkedEvidenceIds: sanitizeEvidenceIds(auditCase, finding.linkedEvidenceIds),
+    title: typeof finding.title === "string" ? finding.title.trim() : "",
+    description: typeof finding.description === "string" ? finding.description.trim() : "",
+    condition:
+      typeof finding.condition === "string" && finding.condition.trim().length > 0
+        ? finding.condition.trim()
+        : typeof finding.description === "string"
+          ? finding.description.trim()
+          : "",
+    criteria: typeof finding.criteria === "string" ? finding.criteria.trim() : "",
+    cause: typeof finding.cause === "string" ? finding.cause.trim() : "",
+    effect: typeof finding.effect === "string" ? finding.effect.trim() : "",
+    recommendation:
+      typeof finding.recommendation === "string" ? finding.recommendation.trim() : "",
+    linkedEvidenceIds: sanitizeEvidenceIds(auditCase, finding.linkedEvidenceIds ?? []),
   }));
+}
+
+function normalizeFindingDraftForm(
+  snapshotForm: Partial<FindingDraftForm> & { description?: unknown },
+): FindingDraftForm {
+  const severity =
+    snapshotForm.severity === "Low" || snapshotForm.severity === "High" ? snapshotForm.severity : "Medium";
+
+  return {
+    title: typeof snapshotForm.title === "string" ? snapshotForm.title : "",
+    condition:
+      typeof snapshotForm.condition === "string"
+        ? snapshotForm.condition
+        : typeof snapshotForm.description === "string"
+          ? snapshotForm.description
+          : "",
+    criteria: typeof snapshotForm.criteria === "string" ? snapshotForm.criteria : "",
+    cause: typeof snapshotForm.cause === "string" ? snapshotForm.cause : "",
+    effect: typeof snapshotForm.effect === "string" ? snapshotForm.effect : "",
+    severity,
+    recommendation: typeof snapshotForm.recommendation === "string" ? snapshotForm.recommendation : "",
+    linkedEvidenceIds: Array.isArray(snapshotForm.linkedEvidenceIds) ? snapshotForm.linkedEvidenceIds : [],
+  };
 }
 
 function normalizeScoreBreakdown(score: ScoreBreakdown | null | undefined): ScoreBreakdown | null {
@@ -278,6 +221,11 @@ function normalizeScoreBreakdown(score: ScoreBreakdown | null | undefined): Scor
     severityMismatches: Array.isArray(score.severityMismatches) ? score.severityMismatches : [],
     wellSupportedFindingIds: Array.isArray(score.wellSupportedFindingIds) ? score.wellSupportedFindingIds : [],
     thinSupportedFindingIds: Array.isArray(score.thinSupportedFindingIds) ? score.thinSupportedFindingIds : [],
+    memoStrongFindingIds: Array.isArray(score.memoStrongFindingIds) ? score.memoStrongFindingIds : [],
+    memoDevelopingFindingIds: Array.isArray(score.memoDevelopingFindingIds)
+      ? score.memoDevelopingFindingIds
+      : [],
+    memoSparseFindingIds: Array.isArray(score.memoSparseFindingIds) ? score.memoSparseFindingIds : [],
   };
 }
 
@@ -329,17 +277,17 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     set((state) => {
       const nextCase = getAuditCase(state.selectedCaseId);
       return {
-      selectedCaseId: nextCase.id,
-      ...createCaseRunState(
-        nextCase,
-        "standard",
-        normalizeRunDifficulty(runDifficulty),
-        createRunVariantKey(nextCase.id, "standard", []),
-        [],
-        null,
-      ),
-    };
-  }),
+        selectedCaseId: nextCase.id,
+        ...createCaseRunState(
+          nextCase,
+          "standard",
+          normalizeRunDifficulty(runDifficulty),
+          createRunVariantKey(nextCase.id, "standard", []),
+          [],
+          null,
+        ),
+      };
+    }),
   beginPracticeCase: (caseId, focusIssueIds, runDifficulty, practiceBrief) =>
     set(() => {
       const nextCase = getAuditCase(caseId);
@@ -367,7 +315,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
           ? snapshot.runVariantKey
           : createLegacyVariantKey(auditCase.id, snapshotRunMode, snapshotPracticeFocusIssueIds);
       const snapshotRunDifficulty = normalizeRunDifficulty(snapshot.runDifficulty);
-      const runCase = buildVariantCase(
+      const variantResult = buildVariantCase(
         auditCase,
         snapshotRunVariantKey,
         snapshotRunMode,
@@ -376,6 +324,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
           auditCase.issues.some((issue) => issue.id === issueId),
         ),
       );
+      const runCase = variantResult.auditCase;
       const discoveredEvidenceIds = Array.from(
         new Set([
           ...runCase.initialEvidenceIds,
@@ -389,6 +338,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         runMode: snapshotRunMode,
         runDifficulty: snapshotRunDifficulty,
         runVariantKey: snapshotRunVariantKey,
+        runVariantProfile: variantResult.runVariantProfile,
         practiceFocusIssueIds: snapshotPracticeFocusIssueIds.filter((issueId) =>
           runCase.issues.some((issue) => issue.id === issueId),
         ),
@@ -403,10 +353,14 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         interviewLogIds: sanitizeInterviewIds(runCase, snapshot.interviewLogIds),
         workstationTab: snapshot.workstationTab,
         draftedFindings: sanitizeDraftFindings(runCase, snapshot.draftedFindings),
-        findingDraftForm: {
+        findingDraftForm: normalizeFindingDraftForm({
+          ...defaultFindingDraftForm,
           ...snapshot.findingDraftForm,
-          linkedEvidenceIds: sanitizeEvidenceIds(runCase, snapshot.findingDraftForm.linkedEvidenceIds),
-        },
+          linkedEvidenceIds: sanitizeEvidenceIds(
+            runCase,
+            snapshot.findingDraftForm?.linkedEvidenceIds ?? [],
+          ),
+        }),
         reportSubmitted: snapshot.reportSubmitted,
         finalScore: normalizeScoreBreakdown(snapshot.finalScore),
       };
@@ -420,6 +374,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
       runMode: state.runMode,
       runDifficulty: state.runDifficulty,
       runVariantKey: state.runVariantKey,
+      runVariantProfile: state.runVariantProfile,
       practiceFocusIssueIds: state.practiceFocusIssueIds,
       practiceBrief: state.practiceBrief,
       selectedEvidenceId: state.selectedEvidenceId,
@@ -477,17 +432,21 @@ export const useAuditStore = create<AuditState>((set, get) => ({
   addDraftFinding: () =>
     set((state) => {
       const form = state.findingDraftForm;
-      if (!form.title.trim() || !form.description.trim()) {
+      if (!form.title.trim() || !form.condition.trim()) {
         return state;
       }
 
       const nextFinding: DraftFinding = {
         id: `finding-${Date.now()}`,
         title: form.title.trim(),
-        description: form.description.trim(),
+        description: form.condition.trim(),
+        condition: form.condition.trim(),
+        criteria: form.criteria.trim(),
+        cause: form.cause.trim(),
+        effect: form.effect.trim(),
         severity: form.severity,
         recommendation: form.recommendation.trim(),
-        linkedEvidenceIds: form.linkedEvidenceIds,
+        linkedEvidenceIds: [...form.linkedEvidenceIds],
       };
 
       return {
@@ -515,6 +474,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         runMode: state.runMode,
         runDifficulty: state.runDifficulty,
         runVariantKey: state.runVariantKey,
+        runVariantProfile: state.runVariantProfile,
         practiceFocusIssueIds: state.practiceFocusIssueIds,
         practiceBrief: state.practiceBrief,
         selectedEvidenceId: firstEvidenceId,

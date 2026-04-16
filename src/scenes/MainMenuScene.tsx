@@ -18,15 +18,13 @@ import {
   consumePracticeReplay,
   getCareerProgressSummary,
   getCaseMasteryStats,
-  getRecentStudyRuns,
   getStudyMomentumSummary,
   loadPracticeReplay,
   queuePracticeReplay,
 } from "../utils/studyProgress";
 import { SceneModal } from "../components/SceneModal";
-import { CareerProgressPanel } from "../components/CareerProgressPanel";
 
-const menuItems = ["New Game", "Continue", "Options", "Credits"] as const;
+const menuItems = ["New Game", "Continue", "Portfolio", "Options", "Credits"] as const;
 
 type MenuAlertState =
   | {
@@ -72,7 +70,6 @@ export function MainMenuScene() {
   const selectedLabel = useMemo(() => menuItems[selectedIndex], [selectedIndex]);
   const caseCatalog = useMemo(() => buildCaseCatalog(availableCases), [availableCases]);
   const careerSummary = useMemo(() => getCareerProgressSummary(caseCatalog), [caseCatalog]);
-  const recentRuns = useMemo(() => getRecentStudyRuns(caseCatalog, 6), [caseCatalog]);
   const filteredCases = useMemo(
     () => sortCaseCatalog(filterCaseCatalog(caseCatalog, familyFilter), caseSortMode),
     [caseCatalog, familyFilter, caseSortMode],
@@ -131,6 +128,11 @@ export function MainMenuScene() {
     beginSelectedCase(selectedRunDifficulty);
     resetOfficeState();
     setScene("office");
+  };
+
+  const openPortfolio = () => {
+    setMenuAlert(null);
+    setScene("portfolio");
   };
 
   const startPracticeReplay = () => {
@@ -229,6 +231,8 @@ export function MainMenuScene() {
           setScene("options");
         } else if (selectedLabel === "New Game") {
           startNewGame();
+        } else if (selectedLabel === "Portfolio") {
+          openPortfolio();
         } else if (selectedLabel === "Continue" && hasSaveData) {
           setScene(continueScene);
         } else if (selectedLabel === "Credits") {
@@ -299,58 +303,51 @@ export function MainMenuScene() {
             {studyMomentum.mostReplayedCase ? ` (${studyMomentum.mostReplayedCase.timesPlayed} runs)` : ""}.
           </p>
         </section>
-        <CareerProgressPanel
-          summary={careerSummary}
-          eyebrow="Career Track"
-          title="Portfolio Advancement"
-          contextLabel="Current Standing"
-          className="career-panel-menu"
-        />
-        <section className="terminal-panel portfolio-history-panel" aria-label="Recent study runs">
+        <section className="terminal-panel portfolio-preview-panel" aria-label="Portfolio archive preview">
           <div className="artifact-panel-header">
             <div>
-              <p className="eyebrow">Portfolio History</p>
-              <h2>Recent Review Tape</h2>
+              <p className="eyebrow">Portfolio Archive</p>
+              <h2>Open Dossier</h2>
             </div>
-            <div className="panel-chip">{recentRuns.length} runs shown</div>
+            <div className="panel-chip">{careerSummary.careerTitle}</div>
           </div>
-          {recentRuns.length > 0 ? (
-            <div className="portfolio-run-list">
-              {recentRuns.map((run) => (
-                <article key={`${run.caseId}:${run.playedAt}`} className="portfolio-run-card">
-                  <div className="portfolio-run-head">
-                    <div>
-                      <p className="portfolio-run-family">{run.familyLabel}</p>
-                      <h3>{run.caseTitle}</h3>
-                    </div>
-                    <div className="portfolio-run-score">{run.score}/100</div>
-                  </div>
-                  <div className="portfolio-run-meta">
-                    <span>{formatSavedAt(run.playedAt)}</span>
-                    <span>{run.runDifficulty} run</span>
-                    <span>{run.missedIssueIds.length} missed</span>
-                  </div>
-                  <p className="scene-copy small portfolio-run-note">
-                    {run.unsupportedCount > 0
-                      ? `${run.unsupportedCount} unsupported finding${run.unsupportedCount === 1 ? "" : "s"} flagged.`
-                      : run.thinSupportedCount > 0
-                        ? `${run.thinSupportedCount} finding${run.thinSupportedCount === 1 ? "" : "s"} needed stronger evidence support.`
-                        : run.missedIssueIds.length > 0
-                          ? `Control coverage slipped on ${run.missedIssueIds.length} issue${run.missedIssueIds.length === 1 ? "" : "s"}.`
-                          : "Clean closeout with no missed issues recorded."}
-                    {" "}
-                    {run.totalControls > 0
-                      ? `Covered ${run.coveredControlCount}/${run.totalControls} control areas.`
-                      : ""}
-                  </p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="scene-copy small">
-              Your recent run history will appear here as you build out a study portfolio across cases and difficulty tiers.
-            </p>
-          )}
+          <p className="scene-copy small">
+            Step into the dedicated archive to review prior runs, promotion progress, and case coverage by family.
+          </p>
+          <div className="portfolio-preview-grid">
+            <article className="portfolio-preview-card">
+              <span className="metric-label">Career Level</span>
+              <strong>
+                Level {careerSummary.careerLevel} - {careerSummary.careerTitle}
+              </strong>
+            </article>
+            <article className="portfolio-preview-card">
+              <span className="metric-label">Average Best</span>
+              <strong>{averageBestScoreLabel}</strong>
+            </article>
+            <article className="portfolio-preview-card">
+              <span className="metric-label">Replay Ready</span>
+              <strong>{studyMomentum.replayReadyCases}</strong>
+            </article>
+            <article className="portfolio-preview-card">
+              <span className="metric-label">Coverage Families</span>
+              <strong>
+                {careerSummary.categoryCoverage.filter((entry) => entry.touchedCases > 0).length}/
+                {careerSummary.categoryCoverage.length}
+              </strong>
+            </article>
+          </div>
+          <button
+            type="button"
+            className="menu-button selected"
+            onClick={() => {
+              playConfirmTone(sfxVolume);
+              openPortfolio();
+            }}
+          >
+            <span className="menu-indicator">&gt;</span>
+            <span>Open Portfolio</span>
+          </button>
         </section>
         <section className="case-select-card" aria-label="Case selection">
           <div className="case-select-header">

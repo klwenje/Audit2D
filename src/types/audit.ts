@@ -37,6 +37,10 @@ export type DraftFinding = {
   id: string;
   title: string;
   description: string;
+  condition?: string;
+  criteria: string;
+  cause: string;
+  effect: string;
   severity: Severity;
   linkedEvidenceIds: string[];
   recommendation: string;

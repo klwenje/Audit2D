@@ -8,10 +8,27 @@ export type ScoreBreakdown = {
   severityMismatches: string[];
   wellSupportedFindingIds: string[];
   thinSupportedFindingIds: string[];
+  memoStrongFindingIds: string[];
+  memoDevelopingFindingIds: string[];
+  memoSparseFindingIds: string[];
+};
+
+export type FindingMemoProfile = {
+  condition: string;
+  criteria: string;
+  cause: string;
+  effect: string;
+  recommendation: string;
+  filledCount: number;
+  missingFields: Array<"condition" | "criteria" | "cause" | "effect" | "recommendation">;
 };
 
 function normalizeTitle(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeMemoText(value: string | undefined) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 const WORD_SYNONYMS: Record<string, string> = {
@@ -189,6 +206,39 @@ function tokenDice(sourceTokens: string[], targetTokens: string[]) {
   return (2 * overlap) / (sourceSet.size + targetSet.size);
 }
 
+function getFindingConditionText(finding: DraftFinding) {
+  return normalizeMemoText(finding.condition) || normalizeMemoText(finding.description);
+}
+
+export function getFindingMemoProfile(finding: DraftFinding): FindingMemoProfile {
+  const condition = getFindingConditionText(finding);
+  const criteria = normalizeMemoText(finding.criteria);
+  const cause = normalizeMemoText(finding.cause);
+  const effect = normalizeMemoText(finding.effect);
+  const recommendation = normalizeMemoText(finding.recommendation);
+  const filledCount = [condition, criteria, cause, effect, recommendation].reduce(
+    (count, value) => (value.length > 0 ? count + 1 : count),
+    0,
+  );
+  const missingFields: FindingMemoProfile["missingFields"] = [];
+
+  if (condition.length === 0) missingFields.push("condition");
+  if (criteria.length === 0) missingFields.push("criteria");
+  if (cause.length === 0) missingFields.push("cause");
+  if (effect.length === 0) missingFields.push("effect");
+  if (recommendation.length === 0) missingFields.push("recommendation");
+
+  return {
+    condition,
+    criteria,
+    cause,
+    effect,
+    recommendation,
+    filledCount,
+    missingFields,
+  };
+}
+
 function scoreFindingAgainstIssue(finding: DraftFinding, issue: Issue) {
   const normalizedFindingTitle = normalizeTitle(finding.title);
   const normalizedIssueTitle = normalizeTitle(issue.title);
@@ -202,8 +252,16 @@ function scoreFindingAgainstIssue(finding: DraftFinding, issue: Issue) {
   }
 
   const findingTitleTokens = tokenize(finding.title);
+  const findingMemoProfile = getFindingMemoProfile(finding);
   const findingContextTokens = tokenize(
-    `${finding.title} ${finding.description} ${finding.recommendation}`,
+    [
+      finding.title,
+      findingMemoProfile.condition,
+      findingMemoProfile.criteria,
+      findingMemoProfile.cause,
+      findingMemoProfile.effect,
+      findingMemoProfile.recommendation,
+    ].join(" "),
   );
   const issueTitleTokens = tokenize(issue.title);
   const issueContextTokens = tokenize(
@@ -231,6 +289,24 @@ function getEvidenceOverlapCount(finding: DraftFinding, issue: Issue) {
   }, 0);
 }
 
+function getMemoSectionCount(finding: DraftFinding) {
+  return getFindingMemoProfile(finding).filledCount;
+}
+
+function getMemoStructureBucket(finding: DraftFinding) {
+  const sectionCount = getMemoSectionCount(finding);
+
+  if (sectionCount >= 5) {
+    return "strong" as const;
+  }
+
+  if (sectionCount >= 3) {
+    return "developing" as const;
+  }
+
+  return "sparse" as const;
+}
+
 export function scoreFindings(expectedIssues: Issue[], submittedFindings: DraftFinding[]): ScoreBreakdown {
   let score = 0;
   const matchedIssueIds: string[] = [];
@@ -239,6 +315,9 @@ export function scoreFindings(expectedIssues: Issue[], submittedFindings: DraftF
   const severityMismatches: string[] = [];
   const wellSupportedFindingIds: string[] = [];
   const thinSupportedFindingIds: string[] = [];
+  const memoStrongFindingIds: string[] = [];
+  const memoDevelopingFindingIds: string[] = [];
+  const memoSparseFindingIds: string[] = [];
 
   const candidates = submittedFindings.flatMap((finding) =>
     expectedIssues.map((issue) => ({
@@ -282,6 +361,18 @@ export function scoreFindings(expectedIssues: Issue[], submittedFindings: DraftF
   });
 
   submittedFindings.forEach((finding) => {
+    const memoStructureBucket = getMemoStructureBucket(finding);
+
+    if (memoStructureBucket === "strong") {
+      memoStrongFindingIds.push(finding.id);
+      score += 2;
+    } else if (memoStructureBucket === "developing") {
+      memoDevelopingFindingIds.push(finding.id);
+      score += 1;
+    } else {
+      memoSparseFindingIds.push(finding.id);
+    }
+
     const match = matchedPairs.get(finding.id);
 
     if (!match) {
@@ -329,5 +420,8 @@ export function scoreFindings(expectedIssues: Issue[], submittedFindings: DraftF
     severityMismatches,
     wellSupportedFindingIds,
     thinSupportedFindingIds,
+    memoStrongFindingIds,
+    memoDevelopingFindingIds,
+    memoSparseFindingIds,
   };
 }
