@@ -9,6 +9,7 @@ export type CaseMasteryStats = {
   timesPlayed: number;
   lastPlayedAt: string | null;
   lastMissedIssueIds: string[];
+  lastClearedIssueIds: string[];
 };
 
 export type StudyMomentumSummary = {
@@ -80,6 +81,7 @@ export type StudyRunRecord = {
   score: number;
   runDifficulty: RunDifficulty;
   missedIssueIds: string[];
+  clearedIssueIds: string[];
   unsupportedCount: number;
   thinSupportedCount: number;
   coveredControlCount: number;
@@ -162,11 +164,43 @@ function createDefaultCaseMasteryStats(): CaseMasteryStats {
     timesPlayed: 0,
     lastPlayedAt: null,
     lastMissedIssueIds: [],
+    lastClearedIssueIds: [],
   };
 }
 
 function normalizeIssueIds(issueIds: string[]) {
   return Array.from(new Set(issueIds.filter(Boolean)));
+}
+
+function normalizeCaseMasteryStats(stats: Partial<CaseMasteryStats> | undefined): CaseMasteryStats {
+  return {
+    bestScore: typeof stats?.bestScore === "number" ? stats.bestScore : null,
+    timesPlayed: typeof stats?.timesPlayed === "number" ? Math.max(0, stats.timesPlayed) : 0,
+    lastPlayedAt: typeof stats?.lastPlayedAt === "string" ? stats.lastPlayedAt : null,
+    lastMissedIssueIds: normalizeIssueIds(Array.isArray(stats?.lastMissedIssueIds) ? stats.lastMissedIssueIds : []),
+    lastClearedIssueIds: normalizeIssueIds(
+      Array.isArray(stats?.lastClearedIssueIds) ? stats.lastClearedIssueIds : [],
+    ),
+  };
+}
+
+function normalizeStudyRunRecord(run: Partial<StudyRunRecord> | undefined): StudyRunRecord | null {
+  if (!run || typeof run.caseId !== "string" || typeof run.playedAt !== "string") {
+    return null;
+  }
+
+  return {
+    caseId: run.caseId,
+    playedAt: run.playedAt,
+    score: typeof run.score === "number" ? Math.max(0, Math.round(run.score)) : 0,
+    runDifficulty: normalizeRunDifficulty(run.runDifficulty),
+    missedIssueIds: normalizeIssueIds(Array.isArray(run.missedIssueIds) ? run.missedIssueIds : []),
+    clearedIssueIds: normalizeIssueIds(Array.isArray(run.clearedIssueIds) ? run.clearedIssueIds : []),
+    unsupportedCount: typeof run.unsupportedCount === "number" ? Math.max(0, run.unsupportedCount) : 0,
+    thinSupportedCount: typeof run.thinSupportedCount === "number" ? Math.max(0, run.thinSupportedCount) : 0,
+    coveredControlCount: typeof run.coveredControlCount === "number" ? Math.max(0, run.coveredControlCount) : 0,
+    totalControls: typeof run.totalControls === "number" ? Math.max(0, run.totalControls) : 0,
+  };
 }
 
 function getMasteryBand(score: number | null) {
@@ -276,7 +310,11 @@ function loadStudyProgressStore(): StudyProgressStore {
     return {
       version: 1,
       cases: parsed.cases,
-      recentRuns: Array.isArray(parsed.recentRuns) ? parsed.recentRuns : [],
+      recentRuns: Array.isArray(parsed.recentRuns)
+        ? parsed.recentRuns
+            .map((run) => normalizeStudyRunRecord(run))
+            .filter((run): run is StudyRunRecord => Boolean(run))
+        : [],
     };
   } catch {
     return { version: 1, cases: {} };
@@ -324,7 +362,7 @@ function loadPracticeReplayStore(): PracticeReplaySession | null {
 
 export function getCaseMasteryStats(caseId: string): CaseMasteryStats {
   const store = loadStudyProgressStore();
-  return store.cases[caseId] ?? createDefaultCaseMasteryStats();
+  return normalizeCaseMasteryStats(store.cases[caseId]);
 }
 
 export function getStudyMomentumSummary(
@@ -334,7 +372,7 @@ export function getStudyMomentumSummary(
   const store = loadStudyProgressStore();
   const caseStats = caseIds.map((caseId) => ({
     caseId,
-    stats: store.cases[caseId] ?? createDefaultCaseMasteryStats(),
+    stats: normalizeCaseMasteryStats(store.cases[caseId]),
   }));
 
   if (projectedRun) {
@@ -355,6 +393,7 @@ export function getStudyMomentumSummary(
           timesPlayed: currentStats.timesPlayed + 1,
           lastPlayedAt: new Date().toISOString(),
           lastMissedIssueIds: normalizeIssueIds(projectedRun.missedIssueIds),
+          lastClearedIssueIds: currentStats.lastClearedIssueIds,
         },
       };
     }
@@ -419,7 +458,7 @@ export function getCareerProgressSummary(
     caseId: entry.id,
     familyId: entry.familyId,
     familyLabel: entry.familyLabel,
-    stats: store.cases[entry.id] ?? createDefaultCaseMasteryStats(),
+    stats: normalizeCaseMasteryStats(store.cases[entry.id]),
   }));
 
   if (projectedRun) {
@@ -440,6 +479,7 @@ export function getCareerProgressSummary(
           timesPlayed: currentStats.timesPlayed + 1,
           lastPlayedAt: new Date().toISOString(),
           lastMissedIssueIds: normalizeIssueIds(projectedRun.missedIssueIds),
+          lastClearedIssueIds: currentStats.lastClearedIssueIds,
         },
       };
     }
@@ -573,8 +613,12 @@ export function recordCaseStudyRun(
   }
 
   const store = loadStudyProgressStore();
-  const currentStats = store.cases[caseId] ?? createDefaultCaseMasteryStats();
+  const currentStats = normalizeCaseMasteryStats(store.cases[caseId]);
   const normalizedScore = Number.isFinite(score) ? Math.max(0, Math.round(score)) : 0;
+  const normalizedMissedIssueIds = normalizeIssueIds(missedIssueIds);
+  const clearedIssueIds = currentStats.lastMissedIssueIds.filter(
+    (issueId) => !normalizedMissedIssueIds.includes(issueId),
+  );
   const playedAt = new Date().toISOString();
 
   store.cases[caseId] = {
@@ -584,7 +628,8 @@ export function recordCaseStudyRun(
         : Math.max(currentStats.bestScore, normalizedScore),
     timesPlayed: currentStats.timesPlayed + 1,
     lastPlayedAt: playedAt,
-    lastMissedIssueIds: normalizeIssueIds(missedIssueIds),
+    lastMissedIssueIds: normalizedMissedIssueIds,
+    lastClearedIssueIds: clearedIssueIds,
   };
 
   const nextRecentRuns: StudyRunRecord[] = [
@@ -593,7 +638,8 @@ export function recordCaseStudyRun(
       playedAt,
       score: normalizedScore,
       runDifficulty: normalizeRunDifficulty(metadata?.runDifficulty),
-      missedIssueIds: normalizeIssueIds(missedIssueIds),
+      missedIssueIds: normalizedMissedIssueIds,
+      clearedIssueIds,
       unsupportedCount: Math.max(0, metadata?.unsupportedCount ?? 0),
       thinSupportedCount: Math.max(0, metadata?.thinSupportedCount ?? 0),
       coveredControlCount: Math.max(0, metadata?.coveredControlCount ?? 0),

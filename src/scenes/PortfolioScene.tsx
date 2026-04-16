@@ -84,6 +84,13 @@ export function PortfolioScene() {
         .filter(Boolean),
     [selectedCase, selectedCaseStudy.lastMissedIssueIds],
   );
+  const selectedCaseClearedLabels = useMemo(
+    () =>
+      selectedCaseStudy.lastClearedIssueIds
+        .map((issueId) => selectedCase.issues.find((issue) => issue.id === issueId)?.title ?? issueId)
+        .filter(Boolean),
+    [selectedCase, selectedCaseStudy.lastClearedIssueIds],
+  );
   const selectedCaseMissedIssueCount = selectedCaseStudy.lastMissedIssueIds.length;
   const selectedCaseReplayReady = selectedCaseMissedIssueCount > 0;
   const selectedCaseIssueTrail = formatIssueTrail(selectedCaseFocusLabels, selectedCaseMissedIssueCount);
@@ -307,6 +314,10 @@ export function PortfolioScene() {
                   <span className="metric-label">Missed Issues</span>
                   <strong>{selectedCaseMissedIssueCount}</strong>
                 </article>
+                <article className="portfolio-spotlight-stat">
+                  <span className="metric-label">Closed Gaps</span>
+                  <strong>{selectedCaseStudy.lastClearedIssueIds.length}</strong>
+                </article>
               </div>
               <div className="portfolio-focus-block">
                 <div className="artifact-panel-header">
@@ -330,6 +341,11 @@ export function PortfolioScene() {
                     No miss trail yet. Run this case once, then the archive will surface a focused retry here.
                   </p>
                 )}
+                {selectedCaseStudy.lastClearedIssueIds.length > 0 ? (
+                  <p className="scene-copy small portfolio-mastery-note">
+                    Last gaps closed: {formatIssueTrail(selectedCaseClearedLabels, selectedCaseStudy.lastClearedIssueIds.length)}
+                  </p>
+                ) : null}
               </div>
               {selectedCaseRuns.length > 0 ? (
                 <div className="portfolio-mini-run-list" aria-label="Selected case run tape">
@@ -397,6 +413,9 @@ export function PortfolioScene() {
                               ? `Control coverage slipped on ${run.missedIssueIds.length} issue${run.missedIssueIds.length === 1 ? "" : "s"}.`
                               : "Clean closeout with no missed issues recorded."}
                         {" "}
+                        {run.clearedIssueIds.length > 0
+                          ? `Closed ${run.clearedIssueIds.length} prior gap${run.clearedIssueIds.length === 1 ? "" : "s"}. `
+                          : ""}
                         {run.totalControls > 0
                           ? `Covered ${run.coveredControlCount}/${run.totalControls} control areas.`
                           : ""}
@@ -426,7 +445,12 @@ export function PortfolioScene() {
               const caseStudy = getCaseMasteryStats(auditCase.id);
               const latestRun = recentRunByCase.get(auditCase.id) ?? null;
               const caseReplayReady = caseStudy.lastMissedIssueIds.length > 0;
+              const caseClosedGapCount = caseStudy.lastClearedIssueIds.length;
               const caseMissLabels = caseStudy.lastMissedIssueIds
+                .map((issueId) => auditCase.issues.find((issue) => issue.id === issueId)?.title ?? issueId)
+                .filter(Boolean)
+                .slice(0, 2);
+              const caseClearedLabels = caseStudy.lastClearedIssueIds
                 .map((issueId) => auditCase.issues.find((issue) => issue.id === issueId)?.title ?? issueId)
                 .filter(Boolean)
                 .slice(0, 2);
@@ -463,6 +487,11 @@ export function PortfolioScene() {
                       Replay locked. Run this case once to seed a miss trail and unlock a focused retry.
                     </p>
                   )}
+                  {caseClosedGapCount > 0 ? (
+                    <p className="scene-copy small portfolio-mastery-note">
+                      Last gaps closed: {formatIssueTrail(caseClearedLabels, caseClosedGapCount)}
+                    </p>
+                  ) : null}
                   <div className="portfolio-ledger-actions">
                     <button type="button" className="menu-button" onClick={() => openCaseInMenu(auditCase.id)}>
                       <span className="menu-indicator">&gt;</span>

@@ -732,6 +732,19 @@ h1 {
   gap: 0.8rem;
 }
 
+.mastery-closure-panel {
+  display: grid;
+  gap: 0.7rem;
+  border-color: rgba(255, 247, 191, 0.22);
+  background:
+    linear-gradient(135deg, rgba(255, 247, 191, 0.08), transparent 55%),
+    rgba(18, 18, 10, 0.92);
+}
+
+.mastery-closure-copy {
+  margin: 0;
+}
+
 .replay-focus-card .mail-header {
   align-items: center;
 }
@@ -1424,6 +1437,11 @@ h1 {
 
 .portfolio-focus-copy {
   margin: 0;
+}
+
+.portfolio-mastery-note {
+  margin: 0;
+  color: #d9d2a6;
 }
 
 .portfolio-spotlight-actions,

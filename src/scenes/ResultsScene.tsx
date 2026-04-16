@@ -119,6 +119,17 @@ function getReplayTabLabel(tab: ReplayTargetTab) {
   return REPLAY_TAB_LABELS[tab];
 }
 
+function formatLabelList(values: string[], limit = 3) {
+  const preview = values.slice(0, limit);
+  const remaining = Math.max(0, values.length - preview.length);
+
+  if (preview.length === 0) {
+    return "";
+  }
+
+  return remaining > 0 ? `${preview.join(", ")} +${remaining} more` : preview.join(", ");
+}
+
 function buildIssueReplayAction(
   auditCase: ReplayIssueContext,
   issue: { title: string; relatedEvidence: string[] },
@@ -338,6 +349,18 @@ export function ResultsScene() {
     [auditCase, draftedFindings, finalScore, runVariantProfile],
   );
   const caseMastery = getCaseMasteryStats(auditCase.id);
+  const resolvedIssueIds = caseMastery.lastMissedIssueIds.filter(
+    (issueId) => !finalScore.missedIssueIds.includes(issueId),
+  );
+  const resolvedIssueTitles = resolvedIssueIds
+    .map((issueId) => auditCase.issues.find((issue) => issue.id === issueId)?.title ?? issueId)
+    .filter(Boolean);
+  const gapClosureHeadline =
+    resolvedIssueTitles.length > 0
+      ? `You closed ${resolvedIssueTitles.length} previously missed issue${resolvedIssueTitles.length === 1 ? "" : "s"} in this run.`
+      : missedIssues.length === 0
+        ? "No missed issues in this run."
+        : "The miss trail is still open, so the next replay should stay focused on the remaining gaps.";
   const projectedRuns = caseMastery.timesPlayed + 1;
   const projectedBestScore =
     caseMastery.bestScore === null ? finalScore.score : Math.max(caseMastery.bestScore, finalScore.score);
@@ -556,7 +579,31 @@ export function ResultsScene() {
               <span className="metric-label">Memo Structure</span>
               <strong>{memoStrongFindings.length}</strong>
             </article>
+            <article className="summary-metric">
+              <span className="metric-label">Gaps Closed</span>
+              <strong>{resolvedIssueTitles.length}</strong>
+            </article>
           </div>
+        </section>
+
+        <section className="terminal-panel mastery-closure-panel">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Mastery Loop</p>
+              <h2>{resolvedIssueTitles.length > 0 ? "Gap Closure Recorded" : "Current Gap Status"}</h2>
+            </div>
+            <div className="panel-chip">
+              {resolvedIssueTitles.length > 0 ? `${resolvedIssueTitles.length} Closed` : `${missedIssues.length} Open`}
+            </div>
+          </div>
+          <p className="report-summary-copy">{gapClosureHeadline}</p>
+          <p className="scene-copy small mastery-closure-copy">
+            {resolvedIssueTitles.length > 0
+              ? `Closed this round: ${formatLabelList(resolvedIssueTitles)}. The portfolio archive will now treat those gaps as cleared unless they reopen in a later run.`
+              : missedIssues.length === 0
+                ? "This closeout leaves no active miss trail for the case. Portfolio replay will stay locked until a future run records new misses."
+                : `Active miss trail: ${formatLabelList(missedIssues.map((issue) => issue.title))}. Use the targeted replay route below to close them cleanly.`}
+          </p>
         </section>
 
         <section className="terminal-panel adaptive-drill-panel">
