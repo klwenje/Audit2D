@@ -583,10 +583,16 @@ export function ResultsScene() {
                 {rank} | {runDifficulty}
               </div>
               <div className="report-chip">{runVariantProfile.label}</div>
+              {runVariantProfile.campaignPressureLabel ? (
+                <div className="report-chip">{runVariantProfile.campaignPressureLabel}</div>
+              ) : null}
             </div>
           </div>
 
           <p className="report-summary-copy">{narrative}</p>
+          {runVariantProfile.campaignPressureSummary ? (
+            <p className="scene-copy small campaign-rationale">{runVariantProfile.campaignPressureSummary}</p>
+          ) : null}
 
           <div className="summary-metrics">
             <article className="summary-metric">

@@ -1,5 +1,6 @@
 import type { AuditCase, EvidenceItem, InboxMessage, InterviewPrompt } from "../types/audit";
 import type { RunDifficulty } from "./runDifficulty";
+import type { CampaignConsequenceProfile } from "./campaignConsequences";
 
 export type RunMode = "standard" | "practice";
 
@@ -13,6 +14,8 @@ export type RunVariantProfile = {
   summary: string;
   initialEvidenceLimit: number;
   drillPriority: RunVariantTab[];
+  campaignPressureLabel?: string;
+  campaignPressureSummary?: string;
 };
 
 export type RunVariantBuildResult = {
@@ -123,6 +126,7 @@ function scoreEvidenceItem(
   issueEvidenceIds: Set<string>,
   focusEvidenceIds: Set<string>,
   promptRevealEvidenceIds: Set<string>,
+  campaignConsequence: CampaignConsequenceProfile | null,
 ) {
   const text = normalizeText([evidence.title, evidence.content, ...evidence.tags].join(" "));
   let score = 0;
@@ -151,6 +155,20 @@ function scoreEvidenceItem(
 
   if (runMode === "practice") {
     score += focusEvidenceIds.has(evidence.id) ? 18 : 0;
+  }
+
+  if (campaignConsequence) {
+    if (promptRevealEvidenceIds.has(evidence.id)) {
+      score += campaignConsequence.revealAdjustment;
+    }
+
+    if (campaignConsequence.pressureLevel === "pressured" && evidence.type === "system") {
+      score -= 6;
+    }
+
+    if (campaignConsequence.pressureLevel === "stabilized" && evidence.type === "document") {
+      score += 6;
+    }
   }
 
   switch (profile.id) {
@@ -219,12 +237,28 @@ function scoreInboxMessage(message: InboxMessage, profile: VariantDefinition, se
   return score + toSeededNoise(seed, message.id);
 }
 
+function scoreInboxMessageWithPressure(
+  message: InboxMessage,
+  profile: VariantDefinition,
+  seed: string,
+  campaignConsequence: CampaignConsequenceProfile | null,
+) {
+  let score = scoreInboxMessage(message, profile, seed);
+
+  if (campaignConsequence) {
+    score += campaignConsequence.inboxPressureBias;
+  }
+
+  return score;
+}
+
 function scoreInterviewPrompt(
   prompt: InterviewPrompt,
   auditCase: AuditCase,
   profile: VariantDefinition,
   seed: string,
   runDifficulty: RunDifficulty,
+  campaignConsequence: CampaignConsequenceProfile | null,
 ) {
   const revealCount = prompt.revealsEvidenceIds?.length ?? 0;
   const revealedControlCount = (prompt.revealsEvidenceIds ?? []).reduce((count, evidenceId) => {
@@ -250,12 +284,25 @@ function scoreInterviewPrompt(
     score += revealCount === 0 ? 6 : 0;
   }
 
+  if (campaignConsequence) {
+    if (revealCount > 0) {
+      score += campaignConsequence.interviewPressureBias;
+    } else {
+      score -= campaignConsequence.interviewPressureBias / 2;
+    }
+  }
+
   return score + toSeededNoise(seed, prompt.id);
 }
 
-function getInitialEvidenceLimit(profile: VariantDefinition, runDifficulty: RunDifficulty) {
+function getInitialEvidenceLimit(
+  profile: VariantDefinition,
+  runDifficulty: RunDifficulty,
+  campaignConsequence: CampaignConsequenceProfile | null,
+) {
   const difficultyAdjustment = runDifficulty === "easy" ? 1 : runDifficulty === "hard" ? -1 : 0;
-  const nextLimit = profile.initialEvidenceLimit + difficultyAdjustment;
+  const campaignAdjustment = campaignConsequence?.evidenceAdjustment ?? 0;
+  const nextLimit = profile.initialEvidenceLimit + difficultyAdjustment + campaignAdjustment;
   return Math.max(1, Math.min(5, nextLimit));
 }
 
@@ -270,8 +317,14 @@ export function buildVariantCase(
   runMode: RunMode,
   runDifficulty: RunDifficulty,
   focusIssueIds: string[],
+  campaignConsequence: CampaignConsequenceProfile | null = null,
 ): RunVariantBuildResult {
-  const runVariantProfile = buildRunVariantProfile(seed, auditCase);
+  const baseRunVariantProfile = buildRunVariantProfile(seed, auditCase);
+  const runVariantProfile: RunVariantProfile = {
+    ...baseRunVariantProfile,
+    campaignPressureLabel: campaignConsequence?.label,
+    campaignPressureSummary: campaignConsequence?.summary,
+  };
   const issueEvidenceIds = getIssueEvidenceIds(auditCase);
   const focusEvidenceIds = getFocusEvidenceIds(auditCase, focusIssueIds);
   const promptRevealEvidenceIds = getPromptRevealEvidenceIds(auditCase);
@@ -280,24 +333,26 @@ export function buildVariantCase(
     const leftScore = scoreEvidenceItem(
       left,
       auditCase,
-      runVariantProfile,
+      baseRunVariantProfile,
       seed,
       runMode,
       runDifficulty,
       issueEvidenceIds,
       focusEvidenceIds,
       promptRevealEvidenceIds,
+      campaignConsequence,
     );
     const rightScore = scoreEvidenceItem(
       right,
       auditCase,
-      runVariantProfile,
+      baseRunVariantProfile,
       seed,
       runMode,
       runDifficulty,
       issueEvidenceIds,
       focusEvidenceIds,
       promptRevealEvidenceIds,
+      campaignConsequence,
     );
 
     if (leftScore === rightScore) {
@@ -308,8 +363,8 @@ export function buildVariantCase(
   });
 
   const orderedInbox = [...auditCase.inbox].sort((left, right) => {
-    const leftScore = scoreInboxMessage(left, runVariantProfile, seed);
-    const rightScore = scoreInboxMessage(right, runVariantProfile, seed);
+    const leftScore = scoreInboxMessageWithPressure(left, baseRunVariantProfile, seed, campaignConsequence);
+    const rightScore = scoreInboxMessageWithPressure(right, baseRunVariantProfile, seed, campaignConsequence);
 
     if (leftScore === rightScore) {
       return left.id.localeCompare(right.id);
@@ -319,8 +374,22 @@ export function buildVariantCase(
   });
 
   const orderedInterviewPrompts = [...auditCase.interviewPrompts].sort((left, right) => {
-    const leftScore = scoreInterviewPrompt(left, auditCase, runVariantProfile, seed, runDifficulty);
-    const rightScore = scoreInterviewPrompt(right, auditCase, runVariantProfile, seed, runDifficulty);
+    const leftScore = scoreInterviewPrompt(
+      left,
+      auditCase,
+      baseRunVariantProfile,
+      seed,
+      runDifficulty,
+      campaignConsequence,
+    );
+    const rightScore = scoreInterviewPrompt(
+      right,
+      auditCase,
+      baseRunVariantProfile,
+      seed,
+      runDifficulty,
+      campaignConsequence,
+    );
 
     if (leftScore === rightScore) {
       return left.id.localeCompare(right.id);
@@ -330,7 +399,7 @@ export function buildVariantCase(
   });
 
   const initialEvidenceIds = orderedEvidence
-    .slice(0, getInitialEvidenceLimit(runVariantProfile, runDifficulty))
+    .slice(0, getInitialEvidenceLimit(baseRunVariantProfile, runDifficulty, campaignConsequence))
     .map((evidence) => evidence.id);
 
   const nextAuditCase: AuditCase = {

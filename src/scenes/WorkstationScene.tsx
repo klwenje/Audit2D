@@ -305,6 +305,9 @@ export function WorkstationScene() {
             <span>Reviewed: {reviewedCount}/{visibleEvidence.length}</span>
             <span>Interviews: {askedInterviewCount}/{auditCase.interviewPrompts.length}</span>
             <span className="panel-chip">Variant: {runVariantProfile.label}</span>
+            {runVariantProfile.campaignPressureLabel ? (
+              <span className="panel-chip">{runVariantProfile.campaignPressureLabel}</span>
+            ) : null}
             <button type="button" className="panel-chip panel-chip-button" onClick={openPauseOverlay}>
               Pause: Esc
             </button>
@@ -313,6 +316,19 @@ export function WorkstationScene() {
             </button>
           </div>
         </div>
+
+        {runVariantProfile.campaignPressureSummary ? (
+          <section className="terminal-panel campaign-pressure-panel">
+            <div className="artifact-panel-header">
+              <div>
+                <p className="eyebrow">Campaign Consequence</p>
+                <h2>{runVariantProfile.campaignPressureLabel ?? "Campaign Pressure"}</h2>
+              </div>
+              <div className="panel-chip">{runMode === "practice" ? "Replay Context" : "Arc Context"}</div>
+            </div>
+            <p className="scene-copy small">{runVariantProfile.campaignPressureSummary}</p>
+          </section>
+        ) : null}
 
         {runMode === "practice" && (
           <section className="terminal-panel practice-banner">

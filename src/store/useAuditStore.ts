@@ -5,6 +5,7 @@ import { scoreFindings, type ScoreBreakdown } from "../utils/scoring";
 import { normalizeRunDifficulty, type RunDifficulty } from "../utils/runDifficulty";
 import { buildVariantCase, type RunMode, type RunVariantProfile } from "../utils/runVariant";
 import type { PracticeBrief } from "../utils/remediationDrill";
+import { getCampaignConsequenceProfile } from "../utils/campaignConsequences";
 
 type FindingDraftForm = {
   title: string;
@@ -177,6 +178,7 @@ function createCaseRunState(
   focusIssueIds: string[] = [],
   practiceBrief: PracticeBrief | null = null,
 ) {
+  const campaignConsequence = getCampaignConsequenceProfile(auditCases, auditCase.id);
   const validFocusIssueIds = focusIssueIds.filter((issueId) =>
     auditCase.issues.some((issue) => issue.id === issueId),
   );
@@ -186,6 +188,7 @@ function createCaseRunState(
     runMode,
     runDifficulty,
     validFocusIssueIds,
+    campaignConsequence,
   );
   const runCase = variantResult.auditCase;
   const initialEvidenceIds = variantResult.initialEvidenceIds;
@@ -413,6 +416,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         snapshotPracticeFocusIssueIds.filter((issueId) =>
           auditCase.issues.some((issue) => issue.id === issueId),
         ),
+        getCampaignConsequenceProfile(auditCases, auditCase.id),
       );
       const runCase = variantResult.auditCase;
       const discoveredEvidenceIds = Array.from(
