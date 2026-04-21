@@ -93,6 +93,30 @@ export type PortfolioRunEntry = StudyRunRecord & {
   familyLabel: string;
 };
 
+export type CaseDossierInsight = {
+  label: string;
+  count: number;
+};
+
+export type CaseDossierSummary = {
+  runCount: number;
+  lastScore: number | null;
+  bestScore: number | null;
+  recentAverageScore: number | null;
+  scoreDelta: number | null;
+  scoreTrend: "new" | "rising" | "steady" | "falling";
+  lastRunAt: string | null;
+  averageCoveragePercent: number | null;
+  bestCoveragePercent: number | null;
+  averageUnsupportedCount: number;
+  averageThinSupportedCount: number;
+  recurringMisses: CaseDossierInsight[];
+  recentClosures: CaseDossierInsight[];
+  pressureLabel: string;
+  readinessLabel: string;
+  recommendation: string;
+};
+
 export type ProjectedStudyRun = {
   caseId: string;
   score: number;
@@ -594,6 +618,141 @@ export function getRecentStudyRuns(
         familyLabel: caseEntry?.familyLabel ?? "Unknown Family",
       };
     });
+}
+
+function roundAverage(value: number, count: number) {
+  return count > 0 ? Math.round(value / count) : 0;
+}
+
+function getCoveragePercent(run: StudyRunRecord) {
+  return run.totalControls > 0 ? Math.round((run.coveredControlCount / run.totalControls) * 100) : null;
+}
+
+function buildRankedInsights(issueIds: string[], resolveLabel: (issueId: string) => string) {
+  const counts = issueIds.reduce<Map<string, number>>((map, issueId) => {
+    if (!issueId) {
+      return map;
+    }
+
+    map.set(issueId, (map.get(issueId) ?? 0) + 1);
+    return map;
+  }, new Map());
+
+  return Array.from(counts.entries())
+    .map(([issueId, count]) => ({
+      label: resolveLabel(issueId),
+      count,
+    }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
+}
+
+export function getCaseDossierSummary(
+  caseId: string,
+  resolveIssueLabel: (issueId: string) => string,
+): CaseDossierSummary {
+  const store = loadStudyProgressStore();
+  const runs = (store.recentRuns ?? [])
+    .filter((run) => run.caseId === caseId)
+    .slice()
+    .sort((left, right) => new Date(right.playedAt).getTime() - new Date(left.playedAt).getTime());
+  const recentRuns = runs.slice(0, 5);
+  const lastRun = runs[0] ?? null;
+  const previousRun = runs[1] ?? null;
+  const bestScore =
+    runs.length > 0 ? runs.reduce((best, run) => Math.max(best, run.score), runs[0].score) : null;
+  const recentAverageScore =
+    recentRuns.length > 0
+      ? roundAverage(
+          recentRuns.reduce((sum, run) => sum + run.score, 0),
+          recentRuns.length,
+        )
+      : null;
+  const scoreDelta =
+    lastRun && previousRun ? lastRun.score - previousRun.score : null;
+  const scoreTrend =
+    runs.length <= 1
+      ? "new"
+      : scoreDelta !== null && scoreDelta >= 6
+        ? "rising"
+        : scoreDelta !== null && scoreDelta <= -6
+          ? "falling"
+          : "steady";
+  const coveragePercents = recentRuns
+    .map((run) => getCoveragePercent(run))
+    .filter((value): value is number => typeof value === "number");
+  const averageCoveragePercent =
+    coveragePercents.length > 0
+      ? roundAverage(coveragePercents.reduce((sum, value) => sum + value, 0), coveragePercents.length)
+      : null;
+  const bestCoveragePercent =
+    coveragePercents.length > 0 ? Math.max(...coveragePercents) : null;
+  const averageUnsupportedCount = roundAverage(
+    recentRuns.reduce((sum, run) => sum + run.unsupportedCount, 0),
+    recentRuns.length,
+  );
+  const averageThinSupportedCount = roundAverage(
+    recentRuns.reduce((sum, run) => sum + run.thinSupportedCount, 0),
+    recentRuns.length,
+  );
+  const recurringMisses = buildRankedInsights(
+    recentRuns.flatMap((run) => run.missedIssueIds),
+    resolveIssueLabel,
+  ).slice(0, 4);
+  const recentClosures = buildRankedInsights(
+    recentRuns.flatMap((run) => run.clearedIssueIds),
+    resolveIssueLabel,
+  ).slice(0, 4);
+
+  const pressureLabel =
+    recurringMisses.length === 0
+      ? "Clear"
+      : recurringMisses[0].count >= 3
+        ? "High Pressure"
+        : recurringMisses.length >= 2
+          ? "Active"
+          : "Contained";
+  const readinessLabel =
+    !lastRun
+      ? "Unproven"
+      : lastRun.missedIssueIds.length === 0 && lastRun.unsupportedCount === 0
+        ? "Promotion Ready"
+        : lastRun.missedIssueIds.length <= 2 && lastRun.unsupportedCount === 0
+          ? "Cleanup Ready"
+          : "Needs Replay";
+
+  let recommendation = "Finish one scored run to generate dossier intelligence for this engagement.";
+  if (lastRun) {
+    if (lastRun.unsupportedCount > 0) {
+      recommendation = "Anchor the report more tightly to artifacts before pushing this case up your portfolio.";
+    } else if (lastRun.thinSupportedCount > 1) {
+      recommendation = "The findings are directionally right, but the evidence chain still needs tightening.";
+    } else if (lastRun.missedIssueIds.length > 0) {
+      recommendation = "Use a focused replay to close the remaining control gaps and convert the case into a clean archive entry.";
+    } else if (scoreTrend === "rising") {
+      recommendation = "This case is trending up. Push it again at the same or harder difficulty to lock in mastery.";
+    } else {
+      recommendation = "This case is reading clean. Use it as a benchmark while you expand into weaker families.";
+    }
+  }
+
+  return {
+    runCount: runs.length,
+    lastScore: lastRun?.score ?? null,
+    bestScore,
+    recentAverageScore,
+    scoreDelta,
+    scoreTrend,
+    lastRunAt: lastRun?.playedAt ?? null,
+    averageCoveragePercent,
+    bestCoveragePercent,
+    averageUnsupportedCount,
+    averageThinSupportedCount,
+    recurringMisses,
+    recentClosures,
+    pressureLabel,
+    readinessLabel,
+    recommendation,
+  };
 }
 
 export function recordCaseStudyRun(

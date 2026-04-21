@@ -1517,6 +1517,72 @@ h1 {
   gap: 0.6rem;
 }
 
+.portfolio-dossier-panel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(138, 211, 255, 0.22);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(138, 211, 255, 0.08), transparent 28%),
+    rgba(8, 15, 24, 0.88);
+}
+
+.portfolio-dossier-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.portfolio-dossier-card,
+.portfolio-dossier-list-card {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.78rem 0.82rem;
+  border: 1px solid rgba(61, 93, 121, 0.95);
+  background: rgba(10, 17, 29, 0.9);
+}
+
+.portfolio-dossier-card strong,
+.portfolio-dossier-list-head strong,
+.portfolio-dossier-list-row strong {
+  color: #fff7bf;
+}
+
+.portfolio-dossier-card p,
+.portfolio-dossier-note {
+  margin: 0;
+}
+
+.portfolio-dossier-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.portfolio-dossier-list-head,
+.portfolio-dossier-list-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.portfolio-dossier-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.portfolio-dossier-list-row {
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(138, 211, 255, 0.12);
+  color: #d6e1f0;
+}
+
+.portfolio-dossier-list-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .portfolio-ledger-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1918,6 +1984,8 @@ h1 {
   .career-coverage-grid,
   .portfolio-layout,
   .portfolio-preview-grid,
+  .portfolio-dossier-grid,
+  .portfolio-dossier-columns,
   .portfolio-spotlight-stats,
   .portfolio-spotlight-actions,
   .portfolio-ledger-actions {

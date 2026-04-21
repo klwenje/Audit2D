@@ -5,7 +5,14 @@ import { buildCaseCatalog } from "../utils/caseCatalog";
 import { runDifficultyOptions } from "../utils/runDifficulty";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
-import { getCareerProgressSummary, getCaseMasteryStats, getRecentStudyRuns, getStudyMomentumSummary, queuePracticeReplay } from "../utils/studyProgress";
+import {
+  getCareerProgressSummary,
+  getCaseDossierSummary,
+  getCaseMasteryStats,
+  getRecentStudyRuns,
+  getStudyMomentumSummary,
+  queuePracticeReplay,
+} from "../utils/studyProgress";
 
 function formatTimestamp(value: string) {
   const date = new Date(value);
@@ -26,6 +33,31 @@ function formatScore(score: number | null) {
 
 function getLatestRunDifficultyLabel(runDifficulty: string | undefined) {
   return runDifficultyOptions.find((option) => option.id === runDifficulty)?.label ?? "Normal";
+}
+
+function formatPercent(value: number | null) {
+  return value === null ? "—" : `${value}%`;
+}
+
+function formatDelta(value: number | null) {
+  if (value === null || value === 0) {
+    return "Flat";
+  }
+
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+function getTrendLabel(trend: "new" | "rising" | "steady" | "falling") {
+  switch (trend) {
+    case "new":
+      return "New File";
+    case "rising":
+      return "Rising";
+    case "steady":
+      return "Steady";
+    case "falling":
+      return "Falling";
+  }
 }
 
 function formatIssueTrail(labels: string[], totalCount: number) {
@@ -75,6 +107,14 @@ export function PortfolioScene() {
   );
   const selectedCase = caseCatalog[selectedCaseIndex] ?? caseCatalog[0];
   const selectedCaseStudy = useMemo(() => getCaseMasteryStats(selectedCase.id), [selectedCase.id]);
+  const selectedCaseDossier = useMemo(
+    () =>
+      getCaseDossierSummary(
+        selectedCase.id,
+        (issueId) => selectedCase.issues.find((issue) => issue.id === issueId)?.title ?? issueId,
+      ),
+    [selectedCase],
+  );
   const selectedCaseLatestRun = recentRunByCase.get(selectedCase.id) ?? null;
   const selectedCaseRuns = recentRuns.filter((run) => run.caseId === selectedCase.id);
   const selectedCaseFocusLabels = useMemo(
@@ -363,6 +403,80 @@ export function PortfolioScene() {
                   ))}
                 </div>
               ) : null}
+              <section className="portfolio-dossier-panel" aria-label="Selected case dossier intelligence">
+                <div className="artifact-panel-header">
+                  <div>
+                    <p className="eyebrow">Dossier Intelligence</p>
+                    <h3>Trajectory and Replay Pressure</h3>
+                  </div>
+                  <div className="panel-chip">{selectedCaseDossier.readinessLabel}</div>
+                </div>
+                <div className="portfolio-dossier-grid">
+                  <article className="portfolio-dossier-card">
+                    <span className="metric-label">Run Trajectory</span>
+                    <strong>{getTrendLabel(selectedCaseDossier.scoreTrend)}</strong>
+                    <p>
+                      Last {formatScore(selectedCaseDossier.lastScore)} | Delta {formatDelta(selectedCaseDossier.scoreDelta)}
+                    </p>
+                  </article>
+                  <article className="portfolio-dossier-card">
+                    <span className="metric-label">Coverage Signal</span>
+                    <strong>{formatPercent(selectedCaseDossier.averageCoveragePercent)}</strong>
+                    <p>Best recent control coverage: {formatPercent(selectedCaseDossier.bestCoveragePercent)}</p>
+                  </article>
+                  <article className="portfolio-dossier-card">
+                    <span className="metric-label">Evidence Discipline</span>
+                    <strong>{selectedCaseDossier.averageUnsupportedCount}</strong>
+                    <p>{selectedCaseDossier.averageThinSupportedCount} thin findings on the recent tape</p>
+                  </article>
+                  <article className="portfolio-dossier-card">
+                    <span className="metric-label">Replay Pressure</span>
+                    <strong>{selectedCaseDossier.pressureLabel}</strong>
+                    <p>{selectedCaseDossier.runCount} archived run{selectedCaseDossier.runCount === 1 ? "" : "s"}</p>
+                  </article>
+                </div>
+                <div className="portfolio-dossier-columns">
+                  <article className="portfolio-dossier-list-card">
+                    <div className="portfolio-dossier-list-head">
+                      <span className="metric-label">Recurring Gaps</span>
+                      <strong>{selectedCaseDossier.recurringMisses.length}</strong>
+                    </div>
+                    {selectedCaseDossier.recurringMisses.length > 0 ? (
+                      <div className="portfolio-dossier-list">
+                        {selectedCaseDossier.recurringMisses.map((entry) => (
+                          <div key={entry.label} className="portfolio-dossier-list-row">
+                            <span>{entry.label}</span>
+                            <strong>{entry.count}x</strong>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="scene-copy small">No recurring misses across the recent tape.</p>
+                    )}
+                  </article>
+                  <article className="portfolio-dossier-list-card">
+                    <div className="portfolio-dossier-list-head">
+                      <span className="metric-label">Recent Closures</span>
+                      <strong>{selectedCaseDossier.recentClosures.length}</strong>
+                    </div>
+                    {selectedCaseDossier.recentClosures.length > 0 ? (
+                      <div className="portfolio-dossier-list">
+                        {selectedCaseDossier.recentClosures.map((entry) => (
+                          <div key={entry.label} className="portfolio-dossier-list-row">
+                            <span>{entry.label}</span>
+                            <strong>{entry.count}x</strong>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="scene-copy small">No closed gaps recorded yet for this engagement.</p>
+                    )}
+                  </article>
+                </div>
+                <p className="scene-copy small portfolio-dossier-note">
+                  {selectedCaseDossier.recommendation}
+                </p>
+              </section>
               <div className="portfolio-spotlight-actions">
                 <button type="button" className="menu-button" onClick={() => openCaseInMenu(selectedCase.id)}>
                   <span className="menu-indicator">&gt;</span>
