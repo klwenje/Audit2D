@@ -1,6 +1,7 @@
 import type { CaseCatalogEntry } from "./caseCatalog";
 import type { RunDifficulty } from "./runDifficulty";
 import { getCaseDossierSummary, getCaseMasteryStats, type CareerProgressSummary } from "./studyProgress";
+import { getCampaignProgress } from "./campaignProgress";
 
 export type CampaignRecommendation =
   | {
@@ -73,11 +74,16 @@ export function getCampaignRecommendation(
   caseCatalog: CaseCatalogEntry[],
   careerSummary: CareerProgressSummary,
 ): CampaignRecommendation | null {
-  if (caseCatalog.length === 0) {
+  const campaignProgress = getCampaignProgress(caseCatalog, careerSummary);
+  const unlockedCases = caseCatalog.filter((auditCase) =>
+    campaignProgress.unlockedCaseIds.includes(auditCase.id),
+  );
+
+  if (unlockedCases.length === 0) {
     return null;
   }
 
-  const replayCandidate = caseCatalog
+  const replayCandidate = unlockedCases
     .map((auditCase) => {
       const stats = getCaseMasteryStats(auditCase.id);
       const dossier = getCaseDossierSummary(auditCase.id, (issueId) => getIssueLabel(auditCase, issueId));
@@ -121,7 +127,7 @@ export function getCampaignRecommendation(
     };
   }
 
-  const familyExpansionCase = getWeakestUntouchedFamily(caseCatalog, careerSummary);
+  const familyExpansionCase = getWeakestUntouchedFamily(unlockedCases, careerSummary);
   if (familyExpansionCase && getCaseMasteryStats(familyExpansionCase.id).timesPlayed === 0) {
     return {
       mode: "standard",
@@ -135,7 +141,7 @@ export function getCampaignRecommendation(
     };
   }
 
-  const stretchCase = getStretchCase(caseCatalog);
+  const stretchCase = getStretchCase(unlockedCases);
   if (!stretchCase) {
     return null;
   }

@@ -5,6 +5,7 @@ import { buildCaseCatalog } from "../utils/caseCatalog";
 import { runDifficultyOptions } from "../utils/runDifficulty";
 import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
+import { getCampaignProgress } from "../utils/campaignProgress";
 import {
   getCareerProgressSummary,
   getCaseDossierSummary,
@@ -85,6 +86,10 @@ export function PortfolioScene() {
 
   const caseCatalog = useMemo(() => buildCaseCatalog(availableCases), [availableCases]);
   const careerSummary = useMemo(() => getCareerProgressSummary(caseCatalog), [caseCatalog]);
+  const campaignProgress = useMemo(
+    () => getCampaignProgress(caseCatalog, careerSummary),
+    [caseCatalog, careerSummary],
+  );
   const studyMomentum = useMemo(
     () => getStudyMomentumSummary(availableCases.map((auditCase) => auditCase.id)),
     [availableCases],
@@ -624,6 +629,64 @@ export function PortfolioScene() {
                 </article>
               );
             })}
+          </div>
+        </section>
+
+        <section className="terminal-panel campaign-arc-panel" aria-label="Portfolio campaign progress">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Campaign Progress</p>
+              <h2>Arc Review Board</h2>
+            </div>
+            <div className="panel-chip">
+              {campaignProgress.arcs.filter((arc) => arc.unlocked).length}/{campaignProgress.arcs.length} Open
+            </div>
+          </div>
+          <div className="campaign-arc-grid">
+            {campaignProgress.arcs.map((arc) => (
+              <article key={arc.id} className={`campaign-arc-card ${arc.unlocked ? "open" : "locked"}`}>
+                <div className="campaign-arc-head">
+                  <div>
+                    <span className="metric-label">{arc.unlocked ? "Open Arc" : "Locked Arc"}</span>
+                    <strong>{arc.title}</strong>
+                  </div>
+                  <span className="panel-chip">{arc.playedCount}/{arc.caseIds.length} played</span>
+                </div>
+                <p className="scene-copy small">{arc.summary}</p>
+                <p className="scene-copy small campaign-arc-progress">
+                  {arc.clearedCount} cleared at 65+, {arc.masteredCount} mastered, {arc.averageBestScore === null ? "—" : `${arc.averageBestScore}/100`} average best.
+                </p>
+                {!arc.unlocked && arc.unmetRequirements.length > 0 ? (
+                  <div className="campaign-arc-locklist">
+                    {arc.unmetRequirements.map((requirement) => (
+                      <p key={requirement} className="scene-copy small">{requirement}</p>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="terminal-panel promotion-review-panel" aria-label="Portfolio promotion review">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Promotion Review</p>
+              <h2>{campaignProgress.promotionReview.title}</h2>
+            </div>
+            <div className="panel-chip">
+              {campaignProgress.promotionReview.items.filter((item) => item.complete).length}/{campaignProgress.promotionReview.items.length} Complete
+            </div>
+          </div>
+          <p className="scene-copy small">{campaignProgress.promotionReview.summary}</p>
+          <div className="promotion-review-list">
+            {campaignProgress.promotionReview.items.map((item) => (
+              <article key={item.label} className={`promotion-review-card ${item.complete ? "complete" : ""}`}>
+                <span className="metric-label">{item.complete ? "Complete" : "In Progress"}</span>
+                <strong>{item.label}</strong>
+                <p>{item.progressLabel}</p>
+              </article>
+            ))}
           </div>
         </section>
       </div>

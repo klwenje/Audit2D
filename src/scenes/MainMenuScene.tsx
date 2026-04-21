@@ -14,6 +14,7 @@ import { useGameStore } from "../store/useGameStore";
 import { playConfirmTone, playNavigateTone } from "../utils/audio";
 import { loadSaveData } from "../utils/saveData";
 import { getCampaignRecommendation } from "../utils/campaignPlanner";
+import { getCampaignProgress } from "../utils/campaignProgress";
 import {
   clearPracticeReplay,
   consumePracticeReplay,
@@ -71,7 +72,6 @@ export function MainMenuScene() {
   const selectedCaseId = useAuditStore((state) => state.selectedCaseId);
   const setSelectedCase = useAuditStore((state) => state.setSelectedCase);
   const beginCase = useAuditStore((state) => state.beginCase);
-  const beginSelectedCase = useAuditStore((state) => state.beginSelectedCase);
   const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [familyFilter, setFamilyFilter] = useState<CaseFamilyFilter>("all");
@@ -87,15 +87,27 @@ export function MainMenuScene() {
   const selectedLabel = useMemo(() => menuItems[selectedIndex], [selectedIndex]);
   const caseCatalog = useMemo(() => buildCaseCatalog(availableCases), [availableCases]);
   const careerSummary = useMemo(() => getCareerProgressSummary(caseCatalog), [caseCatalog]);
+  const campaignProgress = useMemo(
+    () => getCampaignProgress(caseCatalog, careerSummary),
+    [caseCatalog, careerSummary],
+  );
+  const playableCaseIds = useMemo(
+    () => new Set(campaignProgress.unlockedCaseIds),
+    [campaignProgress.unlockedCaseIds],
+  );
   const filteredCases = useMemo(
     () => sortCaseCatalog(filterCaseCatalog(caseCatalog, familyFilter), caseSortMode),
     [caseCatalog, familyFilter, caseSortMode],
   );
-  const selectedCaseIndex = useMemo(
-    () => filteredCases.findIndex((auditCase) => auditCase.id === selectedCaseId),
-    [filteredCases, selectedCaseId],
+  const unlockedFilteredCases = useMemo(
+    () => filteredCases.filter((auditCase) => playableCaseIds.has(auditCase.id)),
+    [filteredCases, playableCaseIds],
   );
-  const selectedCase = filteredCases[selectedCaseIndex] ?? filteredCases[0] ?? caseCatalog[0];
+  const selectedCaseIndex = useMemo(
+    () => unlockedFilteredCases.findIndex((auditCase) => auditCase.id === selectedCaseId),
+    [unlockedFilteredCases, selectedCaseId],
+  );
+  const selectedCase = unlockedFilteredCases[selectedCaseIndex] ?? unlockedFilteredCases[0] ?? caseCatalog[0];
   const studyMomentum = useMemo(
     () => getStudyMomentumSummary(availableCases.map((auditCase) => auditCase.id)),
     [availableCases],
@@ -186,7 +198,7 @@ export function MainMenuScene() {
     setMenuAlert(null);
     clearPracticeReplay();
     setPracticeReplaySession(null);
-    beginSelectedCase(selectedRunDifficulty);
+    beginCase(selectedCase.id, selectedRunDifficulty);
     resetOfficeState();
     setScene("office");
   };
@@ -250,23 +262,24 @@ export function MainMenuScene() {
   };
 
   const cycleCase = (direction: -1 | 1) => {
-    if (filteredCases.length === 0) {
+    if (unlockedFilteredCases.length === 0) {
       return;
     }
 
-    const nextIndex = (selectedCaseIndex + direction + filteredCases.length) % filteredCases.length;
-    setSelectedCase(filteredCases[nextIndex].id);
+    const nextIndex =
+      (selectedCaseIndex + direction + unlockedFilteredCases.length) % unlockedFilteredCases.length;
+    setSelectedCase(unlockedFilteredCases[nextIndex].id);
   };
 
   useEffect(() => {
-    if (filteredCases.length === 0) {
+    if (unlockedFilteredCases.length === 0) {
       return;
     }
 
-    if (!filteredCases.some((auditCase) => auditCase.id === selectedCaseId)) {
-      setSelectedCase(filteredCases[0].id);
+    if (!unlockedFilteredCases.some((auditCase) => auditCase.id === selectedCaseId)) {
+      setSelectedCase(unlockedFilteredCases[0].id);
     }
-  }, [filteredCases, selectedCaseId, setSelectedCase]);
+  }, [selectedCaseId, setSelectedCase, unlockedFilteredCases]);
 
   useEffect(() => {
     if (!practiceReplaySession) {
@@ -473,12 +486,68 @@ export function MainMenuScene() {
             </button>
           </section>
         ) : null}
+        <section className="terminal-panel campaign-arc-panel" aria-label="Campaign arcs">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Campaign Map</p>
+              <h2>Arc Unlocks</h2>
+            </div>
+            <div className="panel-chip">
+              {campaignProgress.arcs.filter((arc) => arc.unlocked).length}/{campaignProgress.arcs.length} Open
+            </div>
+          </div>
+          <div className="campaign-arc-grid">
+            {campaignProgress.arcs.map((arc) => (
+              <article key={arc.id} className={`campaign-arc-card ${arc.unlocked ? "open" : "locked"}`}>
+                <div className="campaign-arc-head">
+                  <div>
+                    <span className="metric-label">{arc.unlocked ? "Open Arc" : "Locked Arc"}</span>
+                    <strong>{arc.title}</strong>
+                  </div>
+                  <span className="panel-chip">{arc.playedCount}/{arc.caseIds.length} played</span>
+                </div>
+                <p className="scene-copy small">{arc.summary}</p>
+                <p className="scene-copy small campaign-arc-progress">
+                  {arc.clearedCount} cleared at 65+, {arc.masteredCount} mastered, {arc.averageBestScore === null ? "—" : `${arc.averageBestScore}/100`} average best.
+                </p>
+                {!arc.unlocked && arc.unmetRequirements.length > 0 ? (
+                  <div className="campaign-arc-locklist">
+                    {arc.unmetRequirements.map((requirement) => (
+                      <p key={requirement} className="scene-copy small">{requirement}</p>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        </section>
+        <section className="terminal-panel promotion-review-panel" aria-label="Promotion review">
+          <div className="artifact-panel-header">
+            <div>
+              <p className="eyebrow">Promotion Review</p>
+              <h2>{campaignProgress.promotionReview.title}</h2>
+            </div>
+            <div className="panel-chip">
+              {campaignProgress.promotionReview.items.filter((item) => item.complete).length}/{campaignProgress.promotionReview.items.length} Complete
+            </div>
+          </div>
+          <p className="scene-copy small">{campaignProgress.promotionReview.summary}</p>
+          <div className="promotion-review-list">
+            {campaignProgress.promotionReview.items.map((item) => (
+              <article key={item.label} className={`promotion-review-card ${item.complete ? "complete" : ""}`}>
+                <span className="metric-label">{item.complete ? "Complete" : "In Progress"}</span>
+                <strong>{item.label}</strong>
+                <p>{item.progressLabel}</p>
+              </article>
+            ))}
+          </div>
+        </section>
         <section className="case-select-card" aria-label="Case selection">
           <div className="case-select-header">
             <p className="eyebrow">Selected Engagement</p>
             <div className="case-select-controls">
               <div className="panel-chip case-count-chip">
-                {filteredCases.length}/{availableCases.length} in view
+                {unlockedFilteredCases.length}/{availableCases.length} unlocked
               </div>
               <button
                 className="case-switch-button"
@@ -574,6 +643,11 @@ export function MainMenuScene() {
               <p className="scene-copy small">{selectedRunDifficultyOption.description}</p>
             </div>
           </div>
+          {unlockedFilteredCases.length === 0 ? (
+            <p className="scene-copy small">
+              No unlocked cases match this filter yet. Open another family or complete the current promotion review targets to unlock the next arc.
+            </p>
+          ) : null}
           <div className="case-meta-strip">
             <span className="panel-chip">{selectedCase.familyLabel}</span>
             <span className="panel-chip">{selectedCase.difficultyLabel}</span>
