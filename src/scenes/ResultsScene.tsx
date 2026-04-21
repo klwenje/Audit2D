@@ -5,6 +5,7 @@ import { SceneHelpOverlay } from "../components/SceneHelpOverlay";
 import { ScenePauseOverlay } from "../components/ScenePauseOverlay";
 import { CareerProgressPanel } from "../components/CareerProgressPanel";
 import { buildCaseCatalog } from "../utils/caseCatalog";
+import { getCampaignRecommendation } from "../utils/campaignPlanner";
 import { buildAdaptivePracticeBrief } from "../utils/remediationDrill";
 import { clearSaveData } from "../utils/saveData";
 import { playBackTone, playConfirmTone } from "../utils/audio";
@@ -202,6 +203,7 @@ export function ResultsScene() {
   const draftedFindings = useAuditStore((state) => state.draftedFindings);
   const reviewedEvidenceIds = useAuditStore((state) => state.reviewedEvidenceIds);
   const resetAuditProgress = useAuditStore((state) => state.resetAuditProgress);
+  const beginCase = useAuditStore((state) => state.beginCase);
   const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
   const setWorkstationTab = useAuditStore((state) => state.setWorkstationTab);
   const selectEvidence = useAuditStore((state) => state.selectEvidence);
@@ -534,6 +536,10 @@ export function ResultsScene() {
     finalScore.severityMismatches.length > 0 ||
     memoSparseFindings.length > 0 ||
     memoDevelopingFindings.length > 0;
+  const campaignRecommendation = useMemo(
+    () => getCampaignRecommendation(caseCatalog, careerSummary),
+    [caseCatalog, careerSummary],
+  );
 
   return (
     <section className="scene scene-results">
@@ -703,6 +709,54 @@ export function ResultsScene() {
             ))}
           </div>
         </section>
+
+        {campaignRecommendation ? (
+          <section className="terminal-panel campaign-panel">
+            <div className="artifact-panel-header">
+              <div>
+                <p className="eyebrow">Campaign Route</p>
+                <h2>{campaignRecommendation.title}</h2>
+              </div>
+              <div className="panel-chip">
+                {campaignRecommendation.mode === "practice" ? "Replay Route" : "Growth Route"}
+              </div>
+            </div>
+            <p className="report-summary-copy">{campaignRecommendation.summary}</p>
+            <p className="scene-copy small campaign-rationale">{campaignRecommendation.rationale}</p>
+            <div className="report-chip-group">
+              <div className="report-chip">
+                {availableCases.find((entry) => entry.id === campaignRecommendation.caseId)?.title ??
+                  campaignRecommendation.caseId}
+              </div>
+              <div className="report-chip">
+                {campaignRecommendation.runDifficulty}
+              </div>
+            </div>
+            <button
+              className="menu-button selected"
+              onClick={() => {
+                playConfirmTone(sfxVolume);
+                resetAuditProgress();
+                resetOfficeState();
+
+                if (campaignRecommendation.mode === "practice") {
+                  beginPracticeCase(
+                    campaignRecommendation.caseId,
+                    campaignRecommendation.focusIssueIds,
+                    campaignRecommendation.runDifficulty,
+                  );
+                } else {
+                  beginCase(campaignRecommendation.caseId, campaignRecommendation.runDifficulty);
+                }
+
+                setScene("office");
+              }}
+            >
+              <span className="menu-indicator">&gt;</span>
+              <span>{campaignRecommendation.actionLabel}</span>
+            </button>
+          </section>
+        ) : null}
 
         <section className="terminal-panel report-closeout-panel">
           <p className="eyebrow">Final Report Note</p>

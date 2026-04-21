@@ -57,6 +57,7 @@ type AuditState = {
   reportSubmitted: boolean;
   finalScore: ScoreBreakdown | null;
   setSelectedCase: (caseId: string) => void;
+  beginCase: (caseId: string, runDifficulty: RunDifficulty) => void;
   beginSelectedCase: (runDifficulty: RunDifficulty) => void;
   beginPracticeCase: (
     caseId: string,
@@ -345,6 +346,21 @@ export const useAuditStore = create<AuditState>((set, get) => ({
 
       return {
         selectedCaseId: getAuditCase(caseId).id,
+      };
+    }),
+  beginCase: (caseId, runDifficulty) =>
+    set(() => {
+      const nextCase = getAuditCase(caseId);
+      return {
+        selectedCaseId: nextCase.id,
+        ...createCaseRunState(
+          nextCase,
+          "standard",
+          normalizeRunDifficulty(runDifficulty),
+          createRunVariantKey(nextCase.id, "standard", []),
+          [],
+          null,
+        ),
       };
     }),
   beginSelectedCase: (runDifficulty) =>

@@ -13,6 +13,7 @@ import { useAuditStore } from "../store/useAuditStore";
 import { useGameStore } from "../store/useGameStore";
 import { playConfirmTone, playNavigateTone } from "../utils/audio";
 import { loadSaveData } from "../utils/saveData";
+import { getCampaignRecommendation } from "../utils/campaignPlanner";
 import {
   clearPracticeReplay,
   consumePracticeReplay,
@@ -69,6 +70,7 @@ export function MainMenuScene() {
   const availableCases = useAuditStore((state) => state.availableCases);
   const selectedCaseId = useAuditStore((state) => state.selectedCaseId);
   const setSelectedCase = useAuditStore((state) => state.setSelectedCase);
+  const beginCase = useAuditStore((state) => state.beginCase);
   const beginSelectedCase = useAuditStore((state) => state.beginSelectedCase);
   const beginPracticeCase = useAuditStore((state) => state.beginPracticeCase);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -175,6 +177,10 @@ export function MainMenuScene() {
   const sortCountLabel = caseSortOptions.find((option) => option.id === caseSortMode)?.label ?? "Recommended";
   const selectedRunDifficultyOption =
     runDifficultyOptions.find((option) => option.id === selectedRunDifficulty) ?? runDifficultyOptions[1];
+  const campaignRecommendation = useMemo(
+    () => getCampaignRecommendation(caseCatalog, careerSummary),
+    [caseCatalog, careerSummary],
+  );
 
   const startNewGame = () => {
     setMenuAlert(null);
@@ -197,6 +203,30 @@ export function MainMenuScene() {
 
     queuePracticeReplay(selectedCase.id, selectedCaseStudy.lastMissedIssueIds, selectedRunDifficulty);
     setPracticeReplaySession(loadPracticeReplay());
+  };
+
+  const launchCampaignRecommendation = () => {
+    if (!campaignRecommendation) {
+      return;
+    }
+
+    setSelectedCase(campaignRecommendation.caseId);
+
+    if (campaignRecommendation.mode === "practice") {
+      queuePracticeReplay(
+        campaignRecommendation.caseId,
+        campaignRecommendation.focusIssueIds,
+        campaignRecommendation.runDifficulty,
+      );
+      setPracticeReplaySession(loadPracticeReplay());
+      return;
+    }
+
+    clearPracticeReplay();
+    setPracticeReplaySession(null);
+    beginCase(campaignRecommendation.caseId, campaignRecommendation.runDifficulty);
+    resetOfficeState();
+    setScene("office");
   };
 
   const openCredits = () => {
@@ -404,6 +434,45 @@ export function MainMenuScene() {
             <span>Open Portfolio</span>
           </button>
         </section>
+        {campaignRecommendation ? (
+          <section className="terminal-panel campaign-panel" aria-label="Adaptive campaign plan">
+            <div className="artifact-panel-header">
+              <div>
+                <p className="eyebrow">Adaptive Campaign</p>
+                <h2>{campaignRecommendation.title}</h2>
+              </div>
+              <div className="panel-chip">
+                {campaignRecommendation.mode === "practice" ? "Replay Route" : "Growth Route"}
+              </div>
+            </div>
+            <p className="scene-copy small">{campaignRecommendation.summary}</p>
+            <p className="scene-copy small campaign-rationale">{campaignRecommendation.rationale}</p>
+            <div className="case-meta-strip">
+              <span className="panel-chip">
+                {caseCatalog.find((entry) => entry.id === campaignRecommendation.caseId)?.familyLabel ?? "Case"}
+              </span>
+              <span className="panel-chip">
+                {runDifficultyOptions.find((option) => option.id === campaignRecommendation.runDifficulty)?.label ?? "Normal"}
+              </span>
+              <span className="panel-chip">
+                {campaignRecommendation.mode === "practice"
+                  ? `${campaignRecommendation.focusIssueIds.length} focus issue${campaignRecommendation.focusIssueIds.length === 1 ? "" : "s"}`
+                  : "Standard run"}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="menu-button selected"
+              onClick={() => {
+                playConfirmTone(sfxVolume);
+                launchCampaignRecommendation();
+              }}
+            >
+              <span className="menu-indicator">&gt;</span>
+              <span>{campaignRecommendation.actionLabel}</span>
+            </button>
+          </section>
+        ) : null}
         <section className="case-select-card" aria-label="Case selection">
           <div className="case-select-header">
             <p className="eyebrow">Selected Engagement</p>
